@@ -13,28 +13,36 @@ const char *mode_manager_label(terminal_mode_t mode) {
     default: return NULL;
     }
 }
-esp_err_t mode_manager_select_and_restart(terminal_mode_t mode) {
+static const esp_partition_t *mode_partition(terminal_mode_t mode) {
     const char *label = mode_manager_label(mode);
-    if (!label) return ESP_ERR_INVALID_ARG;
-    const esp_partition_t *part = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, label);
+    return label ? esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, label) : NULL;
+}
+esp_err_t mode_manager_select_and_restart(terminal_mode_t mode) {
+    if (!mode_manager_label(mode)) return ESP_ERR_INVALID_ARG;
+    const esp_partition_t *part = mode_partition(mode);
     if (!part) return ESP_ERR_NOT_FOUND;
-    esp_app_desc_t desc;
-    esp_err_t err = esp_ota_get_partition_description(part, &desc);
+    // Validates executable image before changing persistent OTA boot selector.
+    esp_err_t err = esp_ota_set_boot_partition(part);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Partition %s lacks valid app description: %s", label, esp_err_to_name(err));
+        ESP_LOGE(TAG, "Cannot boot %s: %s", mode_manager_label(mode), esp_err_to_name(err));
         return err;
     }
-    err = esp_ota_set_boot_partition(part);
-    if (err != ESP_OK) return err;
-    ESP_LOGI(TAG, "Next boot: %s (%s)", label, desc.version);
+    ESP_LOGI(TAG, "Reboot to %s", mode_manager_label(mode));
     esp_restart();
     return ESP_OK;
+}
+esp_err_t mode_manager_arm_launcher_on_next_reset(void) {
+    const esp_partition_t *factory = mode_partition(MODE_LAUNCHER);
+    if (!factory) return ESP_ERR_NOT_FOUND;
+    // Updates persistent NEXT boot only: current app remains running.
+    esp_err_t err = esp_ota_set_boot_partition(factory);
+    if (err != ESP_OK) ESP_LOGE(TAG, "Cannot re-arm Launcher: %s", esp_err_to_name(err));
+    return err;
 }
 esp_err_t mode_manager_mark_valid_if_pending(void) {
     const esp_partition_t *running = esp_ota_get_running_partition();
     esp_ota_img_states_t state;
-    if (esp_ota_get_state_partition(running, &state) == ESP_OK && state == ESP_OTA_IMG_PENDING_VERIFY) {
+    if (esp_ota_get_state_partition(running, &state) == ESP_OK && state == ESP_OTA_IMG_PENDING_VERIFY)
         return esp_ota_mark_app_valid_cancel_rollback();
-    }
     return ESP_OK;
 }
