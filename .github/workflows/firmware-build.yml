@@ -1,0 +1,49 @@
+name: ESP-IDF Firmware Build
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "components/**"
+      - "partitions/**"
+      - ".github/workflows/firmware-build.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [launcher, ai_chat, home_assistant, sony_remote]
+    steps:
+      - uses: actions/checkout@v4
+      - name: ESP-IDF 5.5.4 build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.4
+          target: esp32s3
+          path: apps/${{ matrix.app }}
+          command: idf.py build
+      - name: Check binary size against its flash slot
+        shell: bash
+        run: |
+          python3 tools/check_binary_size.py "${{ matrix.app }}" "apps/${{ matrix.app }}/build/${{ matrix.app }}.bin"
+      - name: Upload individual application image
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.app }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            apps/${{ matrix.app }}/build/${{ matrix.app }}.bin
+            apps/${{ matrix.app }}/build/bootloader/bootloader.bin
+            apps/${{ matrix.app }}/build/partition_table/partition-table.bin
+            apps/${{ matrix.app }}/build/flasher_args.json

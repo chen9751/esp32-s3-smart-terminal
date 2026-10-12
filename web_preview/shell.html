@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32-S3 Smart Terminal UI Preview</title>
+<style>body{background:#11171e;color:#eee;font:14px system-ui,sans-serif;text-align:center;margin:28px 8px}canvas{max-width:100%;height:auto;border:1px solid #405060;touch-action:none}#status{margin:14px}</style></head>
+<body><h2>Smart Terminal · 640 × 172</h2><p>LVGL WebAssembly 技术预览 · 页面仅为占位，不会真的切换固件</p>
+<div id="status">Loading WebAssembly…</div><canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<script>var Module={canvas:document.getElementById('canvas'),setStatus:function(s){document.getElementById('status').textContent=s||'Ready';},printErr:function(s){console.error(s)}};</script>
+{{{ SCRIPT }}}
+</body></html>

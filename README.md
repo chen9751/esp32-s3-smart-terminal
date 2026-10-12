@@ -40,3 +40,8 @@
 - [ESP-IDF 分区表](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/partition-tables.html)
 - [ESP-IDF OTA](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/system/ota.html)
 - [ESP-SR](https://github.com/espressif/esp-sr)
+
+
+## CI / Web 预览
+
+参见 [GitHub Actions 编译与 Web 预览指南](docs/CI_AND_WEB_PREVIEW.md)。四工程独立自动编译；WebAssembly 640×172 LVGL 浏览器技术预览（目前仅占位页面，与正式 Launcher 还未共享 UI 源码）。发布需要在仓库 Settings → Pages 选择 GitHub Actions，并手动触发首次部署。
