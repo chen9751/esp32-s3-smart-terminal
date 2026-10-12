@@ -32,3 +32,7 @@ Implementation:
 Test: power-on shows Launcher; untouched -> HA at 10s after ready; any touch -> remains Launcher indefinitely; manual AI/Remote/HA works; normal power-cycle from any running mode -> Launcher; HA absent -> stay in Launcher.
 
 ESP-IDF reference: https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/system/ota.html
+
+## Launcher fourth entry: USB storage
+
+Three large cards select AI / HA / Remote via reboot. A **small USB card** enters the Launcher-local storage utility with no reboot. This calls `launcher_policy_notify_activity()` to cancel auto-HA. Returning from storage remains in Launcher (the timer stays canceled); power-cycle starts the standard 10-second timer again. Actual USB MSC implementation is pending, see [USB_STORAGE.md](USB_STORAGE.md).

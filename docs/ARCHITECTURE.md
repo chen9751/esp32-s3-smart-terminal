@@ -2,7 +2,7 @@
 
 | Boot target | Project | Intended behavior |
 |---|---|---|
-| factory | apps/launcher | 3 cards, settings, reboot to chosen app |
+| factory | apps/launcher | 3 large app cards + small USB storage entry, settings; boot selection |
 | ota_0 | apps/ai_chat | LVGL animated faces and audio cloud pipeline, no WakeNet |
 | ota_1 | apps/home_assistant | WakeNet always available while touch dashboard/clock run |
 | ota_2 | apps/sony_remote | BLE HID + touch remote + IMU control |
@@ -24,3 +24,7 @@ UI page functions are placeholders that only log names; they do not draw LVGL wi
 ## Switch lifecycle
 
 Each app checks the ESP-IDF OTA app state on boot and, if pending verification, marks it valid once its minimum self-test succeeds. Returning to Launcher sets factory as next boot partition and reboots. Launcher sets selected ota partition and reboots. **A partition without a flashed valid image must not be selected**; mode_manager performs a basic image descriptor check but does not guarantee runtime stability. A hardware/recovery boot path must be designed before deployment.
+
+## Launcher USB utility
+
+`apps/launcher/main/launcher_storage.[ch]` connects the dedicated `ui/usb_storage_page.[ch]` to `components/usb_storage`. This is not an application partition and not an additional firmware. See [USB_STORAGE.md](USB_STORAGE.md). Actual MSC SD driver is pending hardware verification.

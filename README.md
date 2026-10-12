@@ -12,7 +12,7 @@
 
 ## 系统架构
 
-- **Launcher（factory）**：LVGL 模式选择、系统设置、分区切换。
+- **Launcher（factory）**：三个大卡片（AI / HA / Sony Remote）+ 一个小型 USB TF 卡入口；10 秒无触摸自动进入 HA。USB MSC 仅为 Launcher 内部维护工具，不增加应用分区，也不做 Wi-Fi 传输。
 - **AI Chat（ota_0）**：17 种表情、按键/实时语音、NUC11 与阿里云服务。**不加载 WakeNet**。
 - **Home Assistant（ota_1）**：WakeNet 唤醒、时钟、聆听状态、HA 语音执行反馈，以及灯光/设备触控页面；切换页面不重启。
 - **Sony Remote（ota_2）**：BLE HID、方向/确认/返回、IMU 体感方向、连接与配对页面；与 Wi-Fi 模式隔离。
@@ -49,3 +49,7 @@
 ## TF 卡资源目录
 
 仓库内 `tf_card/` 是 TF 卡根目录的资源模板：`tf_card/smart_terminal/fonts`、`icons`、`images`、`audio`、`themes`，并包含 `manifest.json`。在 Mac 上 `git pull` 后，把 **tf_card 里面的内容** 增量复制到 TF 卡根目录。详细命令、格式及注意事项见 [TF 卡资源说明](docs/TF_CARD_ASSETS.md)。目前仅创建目录，还没有加载器或真实字体图标资源。
+
+## USB TF 卡管理（Launcher 内）
+
+入口布局：**3 个大卡片 + 1 个小型 USB 存储按钮**。插线并手动进入后，计划由 Mac Finder 直接管理 TF 卡，需先在 Finder 中安全弹出再退出。已建立 `components/usb_storage` 与 Launcher 独立页面和流程接口，**当前只是拒绝未实现操作的安全占位，尚不能让 Mac 识别为磁盘**。后续实现见 [USB 存储设计](docs/USB_STORAGE.md)。没有第四个功能固件、没有 Wi-Fi 文件管理。
