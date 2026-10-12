@@ -1,0 +1,16 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "board_support.h"
+#include "mode_manager.h"
+#include "ui/home_page.h"
+#include "ui/settings_page.h"
+static const char *TAG = "launcher";
+void app_main(void) {
+    ESP_LOGI(TAG, "Starting Launcher: factory (phase-0 scaffold)");
+    ESP_ERROR_CHECK(board_support_init());
+    ESP_ERROR_CHECK(mode_manager_mark_valid_if_pending());
+    home_page_show();
+    ESP_LOGW(TAG, "Display/touch/navigation are not yet wired");
+    while (1) vTaskDelay(pdMS_TO_TICKS(1000));
+}

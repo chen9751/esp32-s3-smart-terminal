@@ -1,0 +1,12 @@
+build/
+**/build/
+managed_components/
+**/managed_components/
+sdkconfig
+**/sdkconfig
+sdkconfig.old
+**/sdkconfig.old
+.DS_Store
+.env
+*.pem
+secrets.*
