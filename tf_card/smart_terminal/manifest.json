@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "resource_version": "0.1.0",
+  "project": "esp32-s3-smart-terminal",
+  "layout": "/smart_terminal",
+  "fonts": [],
+  "icons": [],
+  "images": [],
+  "audio": [],
+  "themes": [],
+  "notes": "Resource folders are placeholders; assets and runtime loaders are not yet implemented."
+}

@@ -45,3 +45,7 @@
 ## CI / Web 预览
 
 参见 [GitHub Actions 编译与 Web 预览指南](docs/CI_AND_WEB_PREVIEW.md)。四工程独立自动编译；WebAssembly 640×172 LVGL 浏览器技术预览（目前仅占位页面，与正式 Launcher 还未共享 UI 源码）。发布需要在仓库 Settings → Pages 选择 GitHub Actions，并手动触发首次部署。
+
+## TF 卡资源目录
+
+仓库内 `tf_card/` 是 TF 卡根目录的资源模板：`tf_card/smart_terminal/fonts`、`icons`、`images`、`audio`、`themes`，并包含 `manifest.json`。在 Mac 上 `git pull` 后，把 **tf_card 里面的内容** 增量复制到 TF 卡根目录。详细命令、格式及注意事项见 [TF 卡资源说明](docs/TF_CARD_ASSETS.md)。目前仅创建目录，还没有加载器或真实字体图标资源。
