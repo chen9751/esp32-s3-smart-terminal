@@ -1,0 +1,7 @@
+# 16 MiB, one factory app, no OTA. Model partition is provisional.
+# Name,Type,SubType,Offset,Size,Flags
+nvs,data,nvs,0x9000,0x6000,
+phy_init,data,phy,0xF000,0x1000,
+factory,app,factory,0x10000,0x800000,
+model,data,0x40,0x810000,0x100000,
+# 0x910000..0xFFFFFF unallocated. Do not overwrite legacy partition table in app-only flash.
