@@ -2,6 +2,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_system.h"
 #include "board_support.h"
 #include "mode_manager.h"
 #include "launcher_policy.h"
@@ -20,7 +21,15 @@ static void on_action(launcher_action_t a, void *ctx) {
     } else if(a==LAUNCHER_ACTION_BACK) {
         if(launcher_ui_usb_visible()) {
             esp_err_t e=launcher_storage_close();
-            if(e==ESP_OK) launcher_ui_confirm_usb_exit();
+            if(e==ESP_OK) {
+                // On ESP32-S3, TinyUSB OTG and USB Serial/JTAG share the PHY.
+                // Driver uninstall does not reliably hand it back on IDF 5.5.
+                // A controlled restart restores the original console and Launcher.
+                launcher_ui_confirm_usb_exit();
+                ESP_LOGI(TAG,"USB safely closed; restarting Launcher to restore USB Serial/JTAG");
+                vTaskDelay(pdMS_TO_TICKS(250));
+                esp_restart();
+            }
             else ESP_LOGW(TAG,"USB remains open: %s (eject on Mac first)",esp_err_to_name(e));
         }
     } else {

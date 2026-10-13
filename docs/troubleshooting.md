@@ -35,3 +35,15 @@ Boot log before fix confirms app partition at 0x20000 and successful LCD init co
 Real-device test: screen/touch, 8MB PSRAM, Mac Finder SD mount succeeded. When TinyUSB MSC takes the native USB peripheral, the USB-Serial/JTAG monitor disconnects (`Device not configured`). That does not by itself indicate an ESP32 reboot.
 
 The cause of Back remaining blocked after Finder eject was that MSC state never changed from EXPORTED to SAFE_TO_EXIT. Espressif esp_tinyusb 2.x handles host SCSI START STOP UNIT eject by transferring storage ownership from USB to APP. Subscribe to `tinyusb_msc_set_storage_callback`: only `TINYUSB_MSC_EVENT_MOUNT_COMPLETE` with `TINYUSB_MSC_STORAGE_MOUNT_APP` marks SAFE_TO_EXIT. On mount failure keep USB page locked. GPIO0 Back can now clean up after that event; navigate only on ESP_OK. Check with an expendable TF card and monitor re-enumeration on macOS. If the SD FAT cannot be APP-mounted after eject, the UI is intentionally blocked until a proper recovery path is added.
+
+## 2026-10-13: Mac serial monitor remains disconnected after safe USB eject
+Hardware test with firmware 50bd0cd confirms proper security gating: GPIO0 Back is blocked until Finder eject, and returns to Launcher once Finder eject completes. But idf.py monitor never reconnects after USB MSC shutdown.
+
+Espressif USB docs: ESP32-S3 USB OTG and fixed-function USB Serial/JTAG share the same internal PHY, and cannot both operate on it simultaneously. Additionally, an Espressif issue (espressif/esp-idf#15912) reports unreliable restoration of the Serial/JTAG function after TinyUSB uninstall in IDF 5.3.3+.
+
+First-flash workaround: **only after host eject AND successful usb_storage_exit()**, navigate to Launcher and perform esp_restart(). The factory bootloader re-enters Launcher; the serial console can enumerate again. If MSC is still EXPORTED or uninstall fails, do not navigate/restart. Users may need to reopen the monitor on the re-enumerated Mac port; do not assume an existing idf.py monitor handle can always recover. Do not burn any USB PHY eFuses; no hardware changes.
+
+References:
+- https://docs.espressif.com/projects/esp-usb/en/latest/esp32s3/usb_device.html
+- https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/usb-serial-jtag-console.html
+- https://github.com/espressif/esp-idf/issues/15912
