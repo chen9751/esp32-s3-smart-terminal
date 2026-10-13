@@ -1,33 +1,25 @@
-# GitHub Actions CI and Web UI preview
+# CI 与浏览器 UI 预览（单固件主线）
 
-Migrated technical approach from old project [esp32-ai-robot](https://github.com/chen9751/esp32-ai-robot):
-ESP-IDF **v5.5.4** build action; **LVGL v9.2.2** + Emscripten **4.0.15** + SDL2 WebAssembly hosted on GitHub Pages. Old project UI/fonts/code are **not** copied, since this is a new 3-mode system.
+## 固件 CI
 
-## Firmware CI
+[firmware-build.yml](../.github/workflows/firmware-build.yml) **只编译** `apps/terminal`（ESP-IDF 5.5.4），上传：
+- `smart_terminal.bin`
+- ESP-IDF 标准 `bootloader.bin`
+- `partition-table.bin`
+- `flasher_args.json`
 
-[ESP-IDF Firmware Build](../.github/workflows/firmware-build.yml) compiles four **independent projects**: launcher (factory), ai_chat (ota_0), home_assistant (ota_1), sony_remote (ota_2). Each build uploads its own .bin, bootloader, partition table and flasher_args.json, and checks the application .bin size against the configured slot. No automatic flash/OTA or hardware test is performed.
+CI 检查单一 factory 镜像不超过 8 MiB。不存在四应用矩阵、OTA 选择或在线 OTA 更新。标准 Bootloader 仍为必需的 ESP-IDF 启动组件，不可因取消多固件模式而删除。
 
-Actions -> ESP-IDF Firmware Build -> Run workflow. Downloads appear under the run's Artifacts.
+## Web UI 预览
 
-## WebAssembly preview
+[ui-web-preview.yml](../.github/workflows/ui-web-preview.yml) 仍保留 LVGL 9.2.2 + Emscripten/SDL2 的浏览器预览路径。浏览器页面目前仅覆盖 Launcher，**尚未完整复用** `apps/terminal` 中三个业务 UI 的真实源文件；不能代替板上触摸和 GPIO0 验证。
 
-[UI Web Preview](../.github/workflows/ui-web-preview.yml) compiles a **browser-only placeholder** at 640×172 from `web_preview/`. It uses real LVGL 9.2.2 and supports mouse/touch in the browser. It does not yet use the Launcher hardware UI sources: the Launcher page sources currently only print logs. **It is not a visual parity test yet** and it does not perform real boot partition switching or model interactions. The next UI development stage should move hardware-independent page code into a portable component shared by firmware and preview.
+页面启用时在仓库 Settings → Pages 选择 GitHub Actions，并手动触发 UI Web Preview workflow。
 
-Proposed URL once Pages deployment succeeds:
-https://chen9751.github.io/esp32-s3-smart-terminal/
+## 目前已知结果
 
-### One-time GitHub setup needed
+2026-10-14：用户本地已成功编译 `apps/terminal`，`smart_terminal.bin` 报告大小为 `0xB75A0` 字节（8MiB 分区约 91% 空闲）。这并非 CI 或实机验证结果；固件烧录和新分区表迁移前仍须做好备份并测试。
 
-1. Repository -> **Settings -> Pages -> Build and deployment -> Source: GitHub Actions**.
-2. Repository -> **Settings -> Actions -> General**: permit GitHub Actions execution. No secrets are required for public preview.
-3. **Actions -> UI Web Preview -> Run workflow** once; check both build and deploy jobs succeed before using the URL.
-4. **Actions -> ESP-IDF Firmware Build -> Run workflow** and verify all four matrix jobs succeeded before downloading their artifacts.
+## 历史记录
 
-If permissions or Pages environment policy blocks the deployment, inspect the failing Action's log and GitHub repository Pages settings. Page publication may be delayed slightly after the job completes.
-
-## Caveats
-
-- CI workflow runs do **not** prove the physical display/touch/boot path.
-- Current apps are log-only scaffolds and hardware drivers are unimplemented.
-- During launcher visual work, replace browser-only preview mock with portable actual LVGL page implementation. Keep individual pages in separate files.
-- Generated firmware is not ready for production flashing; the partition layout, bootloader, V2 drivers and selection flow still need physical verification.
+四个独立应用及 OTA 分区相关代码仅保留在 `archive/multi-firmware-before-cleanup` 分支，不再作为主线构建目标。
