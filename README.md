@@ -1,80 +1,74 @@
-# ESP32-S3 Smart Terminal
+# ESP32-S3 Smart Terminal · 单固件多模式
 
-基于 Waveshare ESP32-S3-Touch-LCD-3.49-V2 的三固件智能终端。
+> 2026-10-14：开发主线已切换为 **单个 ESP-IDF 工程、单个应用镜像、单套 sdkconfig**。目前处于 **UI 阶段（M1/M2）**，并非 AI/HA/BLE 功能成品；请勿把占位页面当成已经接入的业务。
 
-> 项目正在搭建基础框架，尚未完成硬件驱动、联网、WakeNet 或 BLE HID 功能；当前提交不是可直接使用的成品。
+硬件：Waveshare **ESP32-S3-Touch-LCD-3.49-V2**（18650 电池款），16 MiB Flash / 8 MiB OPI PSRAM / 640×172 横屏 LVGL 9.2.2。主工程：`apps/terminal`。
 
-## 固定启动策略（2026-10-13）
+## 固定的产品逻辑
 
-每次正常开机先进入 Launcher，倒计时 **10 秒**。无触摸活动则**固定自动进入 HA**（从不记忆上次模式）。有触摸则取消本次自动启动，保留 Launcher 供手动选择。进入 AI/HA/Remote 后即把下次重启目标恢复到 factory，不影响本次运行。参见 [启动机制及限制](docs/BOOT_FLOW.md)。
+1. 每次正常开机或按 **RESET** 都进入 Launcher。
+2. Launcher 四个图标：**AI / HA / Sony / USB-TF 工具**。前三项是三种互斥业务模式，第四项仍是 Launcher 维护工具。
+3. 点击 AI/HA/Sony **不重启**，而是删除 Launcher 页面并进入对应 UI，选择后锁定当前模式；不允许从一个业务模式跳到另一个模式。
+4. **只有 RESET 才返回 Launcher**。不设计复杂的模式 stop/deinit/reinit 热切换。
+5. 资源严格按模式初始化：Launcher 不启 Wi-Fi/BLE/AFE；AI 启 Wi-Fi/TLS/音频但不启动 WakeNet/BLE；HA 启 Wi-Fi/WakeNet/音频但不启 BLE；Sony 只启动 BLE HID/遥控 UI，不启动 Wi-Fi、WakeNet、云聊天。
+6. 自用设备一律 **USB 刷写**，不使用 OTA、ota_data、多应用分区、在线升级或 SD 刷写中转。单固件架构文件在 `partitions/single_app_16mb.csv`。
 
-**当前 UI/触摸驱动尚未接入：实际屏幕触摸还不能取消倒计时，暂不可作为完整 UI 固件使用。** 软件实现也不等同于异常早期掉电下的严格 bootloader 保证。
+以上决策来源于项目基线《ESP32-S3_单固件多模式_项目架构与资源预算_v1.0.docx》。不经资源评估及文档修改，不应绕开这些约束。
 
-## 系统架构
+## 当前代码状态（不能跳过）
 
-- **Launcher（factory）**：三个大卡片（AI / HA / Sony Remote）+ 一个小型 USB TF 卡入口；10 秒无触摸自动进入 HA。USB MSC 仅为 Launcher 内部维护工具，不增加应用分区，也不做 Wi-Fi 传输。
-- **AI Chat（ota_0）**：17 种表情、按键/实时语音、NUC11 与阿里云服务。**不加载 WakeNet**。
-- **Home Assistant（ota_1）**：WakeNet 唤醒、时钟、聆听状态、HA 语音执行反馈，以及灯光/设备触控页面；切换页面不重启。
-- **Sony Remote（ota_2）**：BLE HID、方向/确认/返回、IMU 体感方向、连接与配对页面；与 Wi-Fi 模式隔离。
+- **已经实现**：保留 Launcher 四个图标样式；单入口 `app_manager`；同镜像进入互斥页面；AI 17 表情引擎及黑底主界面；AI 长按 GPIO0（约 800ms）进入家长设置，短按返回、10 秒无操作退出；USB/TF 按原 Launcher TinyUSB 服务入口处理。
+- **UI 骨架、尚未完整开发**：AI 设置目前只有六个底部页签及说明，没有参数保存；HA 与 Sony 目前只有各自的标题占位屏，正式 UI 需逐页从旧项目选择性迁移或新写。
+- **没有实现**：AI 云模型、情绪事件联动、WakeNet/HA 业务、BLE HID、音频链路、用户配置管理。
+- **验证状态**：源码已推送 GitHub；本次尚未拿到 `apps/terminal` 的完整 ESP-IDF 编译通过及实机日志。**未通过编译/分区确认前不可直接烧录**。
+- `apps/launcher`、`apps/ai_chat`、`apps/home_assistant`、`apps/sony_remote` 保留为 **legacy 对照工程**，不再作为主线构建/发布目标。AI UI 的旧分支已通过 PR #1 合并到 main。
 
-模式之间通过 ESP-IDF OTA 应用分区选择 API 与重启切换，并非重写二级 Bootloader。`factory` 常驻 Launcher。每套固件的 GUI 页面必须按文件拆分，不允许合并到单个 `main.c`。
+## 开发阶段：先 UI，再业务
 
-## 目录与构建
+| 阶段 | 目标 | 验收 |
+|---|---|---|
+| M1 单工程 | 单 sdkconfig，Launcher 四图标，三模式互斥，RESET 返回 Launcher | 编译、Flash/heap 日志、实机触摸/启动 |
+| M2 全部 UI | 完成 AI 17 表情和家长设置；HA 旧 UI 精简迁移；Sony 遥控 UI；Launcher USB 工具 | 四入口显示/触摸/按钮行为正确，设置无误退 |
+| M3 HA | 按需导入旧 HA/WakeNet 必要模块 | 旧项目内存基线对比，AFE/Wi-Fi 测试 |
+| M4 Sony | BLE HID Peripheral | 配对、重连、操控 |
+| M5 AI 云 | 阿里云实时语音 + 情绪映射 + 受限 HA 调用 | 会话、网络重连、音频/内存稳态 |
+| M6 回归 | 模式互斥、长期运行、USB 更新 | Flash / 内存预算通过 |
 
-参见 `docs/ARCHITECTURE.md`、`docs/PARTITIONS.md`、`docs/DEVELOPMENT.md`。四个独立 ESP-IDF 工程在 `apps/launcher`、`apps/ai_chat`、`apps/home_assistant`、`apps/sony_remote`，公共组件在 `components/`，分区配置在 `partitions/`。
+**目前严格停留在 UI 阶段**；不得为填充页面提前开启网络、WakeNet、BLE 或 AI 服务。
 
-当前为**接口/页面占位骨架**：尚未接入微雪 V2 显示/触摸/音频/IMU 驱动，故运行时仅打印日志，不会渲染屏幕；不可把构建骨架误认为四模式已完成。分区预算在测试 WakeNet 模型大小之后重新确认。
+## Flash 与内存预算
 
-## 全局 UI 主题
+- 应用分区暂定 **8 MiB**，WakeNet 独立模型数据分区 **1 MiB（待 ESP-SR loader 验证）**；其他空闲 Flash 不强行划分。没有 OTA 或 assets 分区。
+- 旧项目 `esp32-ai-robot` 曾测得 WakeNet/AFE 后内部可用 **28,715 B**、最大连续内部块约 **9 KiB**、PSRAM 剩余 **7,318,124 B**；这不是新单固件实测。
+- 新项目 Launcher 之前实测内部空闲 **264,375 B**、PSRAM 空闲 **7,941,524 B**；合并后的静态内存需要重新量化。
+- 工程预估（非实测）：单镜像约 **2.8–4.5 MiB**；PSRAM 剩余 Launcher **7.2–7.55 MiB**、AI **6.2–7.1 MiB**、HA **6.0–7.0 MiB**、Sony **7.0–7.5 MiB**。
+- 内部空闲验收建议：Launcher ≥150KiB；AI ≥80KiB；HA ≥40KiB；Sony ≥80KiB。必须同步记录最大连续内部块与 DMA 内存。HA 是首要风险。
+- 避免把非当前模式的大缓冲定义为内部静态数组；LVGL、网络非 DMA 缓冲、音频环形缓存优先按需 PSRAM；DMA 必须按能力分配。
 
-**纯黑背景 `#000000` + 冰川青蓝主色 `#78DCE8`**。Launcher、AI、HA、Sony Remote 所有后续页面统一使用 `components/ui_theme/include/terminal_theme.h`，详见 [UI 色彩规范](docs/UI_COLOR_THEME.md)。
+## Mac 本地编译（新主线）
 
-## 设计纪律
+```sh
+cd ~/esp32-s3-smart-terminal
+git switch main
+git pull --ff-only origin main
+export IDF_PYTHON_ENV_PATH="$HOME/.espressif/python_env/idf5.5_py3.9_env"
+source ~/esp/esp-idf/export.sh
+python tools/generate_launcher_icons.py
+cd apps/terminal
+idf.py build
+idf.py size
+```
 
-1. UI **一个页面一个 `.c/.h`**，页面间通过明确接口调用，业务逻辑与视图分离。
-2. 共享驱动在 `components/board_support`，共享分区切换在 `components/mode_manager`，不复制到四个工程。
-3. HA 语音+触控在同一个应用，AI 不启用 WakeNet；BLE 遥控不初始化 Wi-Fi。
-4. API 密钥、HA Token、Wi-Fi 密码等不提交到 Git。使用 NVS/安全配置流程，严禁硬编码。
-5. 每次修改硬件配置、分区或遇到可复现问题，更新 README 或 docs/troubleshooting.md。
-6. 重大功能接入前先查 Waveshare V2 原理图/示例、乐鑫 ESP-IDF/ESP-SR 官方文档，再对照实际编译、硬件测试结果。
+**分区表与当前设备上的旧多固件布局不同。** 不要仅用 `0x20000` 或 `0x160000` 的旧偏移刷写单固件；分区迁移需要等构建验证后受控操作，备份旧固件/数据后，使用 `idf.py flash` 完整烧录新 bootloader、partition-table 与 factory 镜像。切勿在本轮未验证时执行 `erase_flash`。
 
-## 官方资源
+## 资料与约束
 
-- [Waveshare ESP32-S3-Touch-LCD-3.49-V2 示例](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2)
-- [ESP-IDF 分区表](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/partition-tables.html)
-- [ESP-IDF OTA](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/system/ota.html)
-- [ESP-SR](https://github.com/espressif/esp-sr)
+- [旧项目 HA/内存基线](https://github.com/chen9751/esp32-ai-robot)：`docs/memory-audit-2026-10-09.md`、`docs/psram-memory-experiment.md`、`docs/memory-optimization-test.md`。
+- [Waveshare 官方 V2](https://github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2)；[ESP-IDF 官方](https://docs.espressif.com/projects/esp-idf/en/v5.5.4/esp32s3/)。
+- 17 表情引擎源于 [0015/lvgl_kawaii_face](https://github.com/0015/lvgl_kawaii_face)，迁移的是旧项目针对 LVGL 9 和 PSRAM 优化版本，许可保留在 `components/lvgl_kawaii_face/LICENSE`。
+- 一页一个 .c/.h；业务逻辑不写入 UI；API Key、HA Token、Wi-Fi 密码不得提交到 GitHub。TF 可拆卸，不能提供密钥机密性。
+- 每次发现可复现的问题，先查 README、官方文档与案例，再将解决办法写入 `docs/troubleshooting.md`；新增功能应核对资源预算与项目基线，避免偏离主线。
 
+## 历史工程
 
-## CI / Web 预览
-
-参见 [GitHub Actions 编译与 Web 预览指南](docs/CI_AND_WEB_PREVIEW.md)。四工程独立自动编译；WebAssembly 640×172 LVGL 浏览器技术预览（目前仅占位页面，与正式 Launcher 还未共享 UI 源码）。发布需要在仓库 Settings → Pages 选择 GitHub Actions，并手动触发首次部署。
-
-## TF 卡资源目录
-
-仓库内 `tf_card/` 是 TF 卡根目录的资源模板：`tf_card/smart_terminal/fonts`、`icons`、`images`、`audio`、`themes`，并包含 `manifest.json`。在 Mac 上 `git pull` 后，把 **tf_card 里面的内容** 增量复制到 TF 卡根目录。详细命令、格式及注意事项见 [TF 卡资源说明](docs/TF_CARD_ASSETS.md)。目前仅创建目录，还没有加载器或真实字体图标资源。
-
-## USB TF 卡管理（Launcher 内）
-
-入口布局：**3 个大卡片 + 1 个小型 USB 存储按钮**。插线并手动进入后，计划由 Mac Finder 直接管理 TF 卡，需先在 Finder 中安全弹出再退出。已建立 `components/usb_storage` 与 Launcher 独立页面和流程接口，**当前只是拒绝未实现操作的安全占位，尚不能让 Mac 识别为磁盘**。后续实现见 [USB 存储设计](docs/USB_STORAGE.md)。没有第四个功能固件、没有 Wi-Fi 文件管理。
-
-## Launcher UI 视觉规范（2026-10-13）
-
-640×172 浅蓝色主题，**四个等大的圆角图标卡片，卡片不显示文字**，顺序为 robot-2-line（AI）、home-wifi-line（HA）、remote-control-line（Sony）、sd-card-mini-line（USB）。USB 页面左侧为 SD 图标，右侧英语连接说明；自定义实体键单击全局返回。真实硬件按键/显示/USB MSC 尚待接入，浏览器预览已改为共享 LVGL UI 模块。全部四个图标为内置资源，**无需拷贝到 TF 卡**。详见 [LAUNCHER_UI.md](docs/LAUNCHER_UI.md)。
-
-### Experimental USB Serial/JTAG recovery after Mac TF eject (firmware 96fce41+)
-
-- Normal: Finder **Eject** TF disk, wait until eject finishes, press physical GPIO0 Back. The USB MSC storage/driver must be fully released before recovery.
-- An independent `components/usb_phy_restore` helper now resets the S3 USB OTG peripheral, restores RTC USB PHY routing to fixed USB Serial/JTAG and triggers USB host re-enumeration on GPIO19/20. This is modeled after Espressif Arduino-ESP32's `usb_switch_to_cdc_jtag()` but is **an experimental port to ESP-IDF 5.5.4**.
-- Expected if successful: Mac shows `/dev/cu.usbmodem*` again without pressing RESET, then fresh `idf.py monitor` can attach. The original monitor may not auto-reconnect.
-- If no port: check `ls /dev/cu.usbmodem*`; press RESET or BOOT+RESET to re-enter ROM download mode for flashing. No data on TF should be corrupted by this recovery since it runs only after a safe eject and complete MSC shutdown.
-- A PHY timeout logs a warning, without restarting or blocking Launcher. **Not yet hardware validated.** Avoid assuming this fixed the console until physical re-enumeration and normal esptool flashing are confirmed.
-- Reference: [Espressif official Arduino-ESP32 USB switch source](https://github.com/espressif/arduino-esp32/blob/master/cores/esp32/esp32-hal-tinyusb.c).
-
-## AI Chat UI 迁移（开发分支，2026-10-14）
-
-- 仅迁移旧仓库 `chen9751/esp32-ai-robot` 已针对 PSRAM 优化的 `components/lvgl_kawaii_face`（含 MIT 许可）；其他旧服务、音频、网络代码不迁移。
-- AI 主页面：640×172 黑色背景与 17 种 Kawaii 表情，当前默认 Neutral、自动眨眼。情绪由 `face_page_preview_emotion()` 提供调用接口，目前未接入云模型。
-- 独立精简设置 UI：沿用旧设置页底部六栏布局及青蓝色视觉；当前全部为 UI 占位，**设置值尚未接入保存及模型配置**。
-- GPIO0 长按 800ms 开启设置；设置中短按返回或 10 秒不操作返回表情。按键由 AI 应用单独处理，不修改 Launcher 按键行为。
-- AI 显示使用现有 `board_support`；本分支尚未在实物硬件上编译/烧录验证，不能当作已验证固件。
+现有 `apps/launcher` 等多工程文件为迁移前参考，不代表仍使用四固件。旧 `docs/PARTITIONS.md`、`docs/ARCHITECTURE.md` 等记录仅作为历史材料；**本 README 与单固件架构基线优先**。
