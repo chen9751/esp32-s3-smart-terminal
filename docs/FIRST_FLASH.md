@@ -1,14 +1,15 @@
 # First flash — standalone Launcher (test-only)
-Source from Waveshare **V2** `ESP-IDF/10_LVGL_V9_Test` hardware example and Espressif official AXS15231B + TCA9554 components; this repo independently implements board support.
+Official Waveshare V2 `ESP-IDF/10_LVGL_V9_Test` electrical mapping, independently implemented using Espressif drivers AXS15231B and TCA9554.
 
-**IMPORTANT: First bringup incomplete until LCD flush DMA completion is made safe.** Current `board_support.c` flush uses an asynchronous SPI transaction while reusing its DMA buffer. This can corrupt video or DMA, so **do not flash this candidate yet** until the semaphore fix is merged and CI succeeds.
+Initial test profile: 640×172 four-card UI, GPIO0 Back, 10-second HA auto-switch and OTA selection disabled, USB experimental. Display uses PSRAM full RGB565 buffer, 16-row internal DMA staging with on-color-trans-done semaphore. No old project code.
 
-Test profile: 640×172 UI with four black/blue cards; GPIO0 short-click Back; 10-second mode-switch and OTA selection disabled; USB MSC experimental and requires Mac eject; no old project assets. Never run full-flash erase unless explicitly requested.
-
-After safe-build approval, in a Mac terminal with IDF_PYTHON_ENV_PATH:
+Do **not** erase flash or use generic `idf.py erase-flash` for this test. Build and flash only after GitHub Actions reports success and sources reviewed:
 ```sh
+export IDF_PYTHON_ENV_PATH="$HOME/.espressif/python_env/idf5.5_py3.9_env"
+. "$HOME/esp/esp-idf/export.sh"
 git clone https://github.com/chen9751/esp32-s3-smart-terminal.git
 cd esp32-s3-smart-terminal/apps/launcher
 idf.py build
 idf.py -p /dev/cu.usbmodem201401 flash monitor
 ```
+Physical touch orientation, LCD signal integrity, USB MSC, and GPIO0 behavior remain **unverified** until first flash. Capture full boot log, any panic, PSRAM sizes, screen/keys and return behavior.

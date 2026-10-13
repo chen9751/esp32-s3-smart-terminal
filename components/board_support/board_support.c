@@ -1,6 +1,8 @@
 #include "board_support.h"
 #include <string.h>
 #include "esp_log.h"
+#include "esp_check.h"
+#include "freertos/semphr.h"
 #include "esp_timer.h"
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
@@ -31,6 +33,7 @@ static uint8_t *rot_buf;
 static uint8_t *dma_buf;
 static bool ready;
 static uint32_t flush_errors;
+static SemaphoreHandle_t flush_done;
 
 static const axs15231b_lcd_init_cmd_t lcd_init_cmds[] = {
     {0x11, (uint8_t[]){0}, 0, 100},
@@ -38,15 +41,16 @@ static const axs15231b_lcd_init_cmd_t lcd_init_cmds[] = {
 };
 static bool tx_done(esp_lcd_panel_io_handle_t io, esp_lcd_panel_io_event_data_t *data, void *ctx) {
     (void)io;(void)data;(void)ctx;
-    return false;
+    BaseType_t wake=pdFALSE;
+    xSemaphoreGiveFromISR(flush_done,&wake);
+    return wake==pdTRUE;
 }
 static void flush_cb(lv_display_t *d,const lv_area_t *area,uint8_t *px) {
     // Full-frame LVGL render at logical 640x172; transpose into native 172x640.
     // Keep DMA copy alive until panel transaction finishes via synchronous waits.
     (void)area;
     lv_draw_sw_rgb565_swap(px,LOG_W*LOG_H);
-    lv_area_t physical={.x1=0,.y1=0,.x2=LOG_W-1,.y2=LOG_H-1};
-    lv_display_rotate_area(d,&physical);
+    (void)d;
     uint32_t src_stride=lv_draw_buf_width_to_stride(LOG_W,LV_COLOR_FORMAT_RGB565);
     uint32_t dst_stride=lv_draw_buf_width_to_stride(PHYS_W,LV_COLOR_FORMAT_RGB565);
     lv_draw_sw_rotate(px,rot_buf,LOG_W,LOG_H,src_stride,dst_stride,
@@ -57,8 +61,10 @@ static void flush_cb(lv_display_t *d,const lv_area_t *area,uint8_t *px) {
         memcpy(dma_buf,rot_buf+row*PHYS_W*2,FLUSH_BYTES);
         esp_err_t err=esp_lcd_panel_draw_bitmap(panel,0,row,PHYS_W,row+FLUSH_ROWS,dma_buf);
         if(err!=ESP_OK) { if(flush_errors++<4) ESP_LOGE(TAG,"flush: %s",esp_err_to_name(err));break; }
-        // TODO: wire an explicit transaction completion semaphore before hardware release.
-        // No safe lifetime guarantee without TX callback acknowledgement.
+        if(xSemaphoreTake(flush_done,pdMS_TO_TICKS(500))!=pdTRUE) {
+            ESP_LOGE(TAG,"LCD QSPI DMA completion timeout");
+            break;
+        }
     }
     lv_display_flush_ready(d);
 }
@@ -70,10 +76,10 @@ static void touch_read(lv_indev_t *indev,lv_indev_data_t *data) {
     if (e==ESP_OK && resp[1]>0 && resp[1]<5) {
         int x=((resp[4]&0x0f)<<8)|resp[5];
         int y=((resp[2]&0x0f)<<8)|resp[3];
-        if (x>=LOG_W) x=LOG_W-1;
-        if (y>=LOG_H) y=LOG_H-1;
-        data->point.x=x;
-        data->point.y=LOG_H-1-y;
+        if (x>=PHYS_W) x=PHYS_W-1;
+        if (y>=PHYS_H) y=PHYS_H-1;
+        data->point.x=y;
+        data->point.y=LOG_H-1-x;
         data->state=LV_INDEV_STATE_PRESSED;
     } else data->state=LV_INDEV_STATE_RELEASED;
 }
@@ -82,6 +88,8 @@ bool board_support_ready(void){return ready;}
 void board_support_loop(void){if(ready) lv_timer_handler();}
 esp_err_t board_support_init(void) {
     lv_init();
+    flush_done=xSemaphoreCreateBinary();
+    if(!flush_done) return ESP_ERR_NO_MEM;
     i2c_master_bus_handle_t bus0,bus1;
     i2c_master_bus_config_t i0={
         .clk_source=I2C_CLK_SRC_DEFAULT,.i2c_port=I2C_NUM_0,
@@ -132,7 +140,7 @@ esp_err_t board_support_init(void) {
     lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
     lv_display_set_buffers(display,frame_buf,NULL,BUF_BYTES,LV_DISPLAY_RENDER_MODE_FULL);
     lv_display_set_flush_cb(display,flush_cb);
-    lv_display_set_rotation(display,LV_DISPLAY_ROTATION_90);
+    // Logical screen remains 640x172; flush rotates pixels to native 172x640.
     lv_indev_t *indev=lv_indev_create();
     lv_indev_set_type(indev,LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev,touch_read);
