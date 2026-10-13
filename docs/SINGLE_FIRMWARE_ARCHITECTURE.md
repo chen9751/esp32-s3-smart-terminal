@@ -24,12 +24,12 @@
 - 资源在用户选择模式以后再初始化。大缓存动态 PSRAM 分配；DMA-capable 内部内存单独统计。
 - 运行期间不允许重新选择业务模式。按 RESET 回到 Launcher，不需要跨模式 stop/restart 状态机。
 - Flash：单 factory 应用分区 8MiB；model 暂定 1MiB，仅为 WakeNet loader 条件预算；空闲空间不额外创造 OTA / assets 分区。
-- 主线工程唯一的 sdkconfig 位于 `apps/terminal/sdkconfig`（本地生成），默认项在 `sdkconfig.defaults`。旧 `apps/*` 分工程保留为历史对照，**不再更新**。
+- 主线工程唯一的 sdkconfig 位于 `apps/terminal/sdkconfig`（本地生成），默认项在 `sdkconfig.defaults`。旧四工程已从 `main` 清理，历史版本见 `archive/multi-firmware-before-cleanup`。
 - UI 验收之前，不迁移 HA 业务、模型、BLE HID 或云端调用。先检查完整页面、字体、触摸、长短按和 10 秒设置页返回。
 
 ## UI 实施顺序
 
-1. 确认单工程可编译，统一 PSRAM 配置和分区；本轮仅源码提交、尚未实机验收。
+1. 确认单工程可编译，统一 PSRAM 配置和分区；已在 Mac 本地完成首次编译（0xB75A0 字节），尚未实机验收。
 2. Launcher：保留四入口视觉、确认点击后不会触发固件重启；验证 USB MSC 安全退出。
 3. AI：完整 17 表情预览与各状态联动（先本地模拟）；设置页按旧版风格实现**真实可操作**的设置控件（业务写入后续）。
 4. HA：从旧 `esp32-ai-robot` 仅迁移必需 UI 页面及资源；不复制全部旧代码、网络/音频服务。
