@@ -20,8 +20,8 @@
 - **已经实现**：保留 Launcher 四个图标样式；单入口 `app_manager`；同镜像进入互斥页面；AI 17 表情引擎及黑底主界面；AI 长按 GPIO0（约 800ms）进入家长设置，短按返回、10 秒无操作退出；USB/TF 按原 Launcher TinyUSB 服务入口处理。
 - **UI 骨架、尚未完整开发**：AI 设置目前只有六个底部页签及说明，没有参数保存；HA 与 Sony 目前只有各自的标题占位屏，正式 UI 需逐页从旧项目选择性迁移或新写。
 - **没有实现**：AI 云模型、情绪事件联动、WakeNet/HA 业务、BLE HID、音频链路、用户配置管理。
-- **验证状态**：源码已推送 GitHub；本次尚未拿到 `apps/terminal` 的完整 ESP-IDF 编译通过及实机日志。**未通过编译/分区确认前不可直接烧录**。
-- `apps/launcher`、`apps/ai_chat`、`apps/home_assistant`、`apps/sony_remote` 保留为 **legacy 对照工程**，不再作为主线构建/发布目标。AI UI 的旧分支已通过 PR #1 合并到 main。
+- **验证状态**：**2026-10-14 本机 `apps/terminal` 已编译成功**：`smart_terminal.bin` = `0xB75A0` bytes，8MiB 应用分区报告剩余约 91%；仍未完成真实单固件设备烧录与联调。
+- **已清理主线的四个 legacy 独立工程、OTA `mode_manager`、旧分区表及旧启动文档**。完整历史源码保存在 `archive/multi-firmware-before-cleanup` 分支，不需要将旧项目重新复制入 `main`。AI UI 的旧分支已通过 PR #1 合并。
 
 ## 开发阶段：先 UI，再业务
 
@@ -72,3 +72,9 @@ idf.py size
 ## 历史工程
 
 现有 `apps/launcher` 等多工程文件为迁移前参考，不代表仍使用四固件。旧 `docs/PARTITIONS.md`、`docs/ARCHITECTURE.md` 等记录仅作为历史材料；**本 README 与单固件架构基线优先**。
+
+## 仓库清理（2026-10-14）
+
+- 本主线只保留 `apps/terminal`；ESP-IDF **标准 bootloader** 仍是启动所必需，不等于旧自定义 OTA 多固件框架，不能删除 `build/bootloader/bootloader.bin` 的烧录步骤。
+- 已删除旧的四个独立 `apps/*` 应用、`components/mode_manager` 和 `partitions/three_mode_16mb.csv`；备份分支 `archive/multi-firmware-before-cleanup` 可供按需查找历史代码。
+- 新单固件构建成功：`smart_terminal.bin` 0xB75A0；**新分区表尚未完成板端烧录核验**。当前阶段继续优先完成三种模式 UI。
