@@ -8,7 +8,6 @@
 #include "esp_heap_caps.h"
 #include "freertos/task.h"
 #include "driver/spi_master.h"
-#include "driver/ledc.h"
 #include "driver/i2c_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -16,8 +15,6 @@
 #include "esp_lcd_axs15231b.h"
 #include "esp_io_expander_tca9554.h"
 
-#define DEFAULT_BRIGHTNESS_PERCENT 20
-#define BACKLIGHT_GPIO 42
 #define PHYS_W 172
 #define PHYS_H 640
 #define LOG_W 640
@@ -89,30 +86,6 @@ static void touch_read(lv_indev_t *indev,lv_indev_data_t *data) {
 static void tick(void *arg){(void)arg;lv_tick_inc(5);}
 bool board_support_ready(void){return ready;}
 void board_support_loop(void){if(ready) lv_timer_handler();}
-static esp_err_t backlight_pwm_init(void) {
-    // Waveshare V2 PWM backlight polarity is inverted: 255=off, 0=max.
-    ledc_timer_config_t timer = {
-        .speed_mode=LEDC_LOW_SPEED_MODE,
-        .duty_resolution=LEDC_TIMER_8_BIT,
-        .timer_num=LEDC_TIMER_3,
-        .freq_hz=50000,
-        .clk_cfg=LEDC_SLOW_CLK_RC_FAST,
-    };
-    ESP_RETURN_ON_ERROR(ledc_timer_config(&timer), TAG, "backlight PWM timer");
-    ledc_channel_config_t channel = {
-        .gpio_num=BACKLIGHT_GPIO,
-        .speed_mode=LEDC_LOW_SPEED_MODE,
-        .channel=LEDC_CHANNEL_1,
-        .intr_type=LEDC_INTR_DISABLE,
-        .timer_sel=LEDC_TIMER_3,
-        .duty=255 - (255 * DEFAULT_BRIGHTNESS_PERCENT / 100),
-        .hpoint=0,
-    };
-    ESP_RETURN_ON_ERROR(ledc_channel_config(&channel), TAG, "backlight PWM channel");
-    ESP_LOGI(TAG,"Boot backlight target=%d%% (PWM duty=%lu)",
-             DEFAULT_BRIGHTNESS_PERCENT,(unsigned long)channel.duty);
-    return ESP_OK;
-}
 esp_err_t board_support_init(void) {
     lv_init();
     flush_done=xSemaphoreCreateBinary();
@@ -159,7 +132,6 @@ esp_err_t board_support_init(void) {
     ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<5,1ULL<<5),TAG,"reset release");
     vTaskDelay(pdMS_TO_TICKS(30));
     ESP_RETURN_ON_ERROR(esp_lcd_panel_init(panel),TAG,"panel init");
-    ESP_RETURN_ON_ERROR(backlight_pwm_init(),TAG,"backlight PWM after LCD init");
     ESP_LOGI(TAG,"Before LVGL buffers: PSRAM=%u, internal=%u, largest PSRAM=%u",
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
@@ -187,9 +159,7 @@ esp_err_t board_support_init(void) {
     esp_timer_handle_t timer;
     ESP_RETURN_ON_ERROR(esp_timer_create(&args,&timer),TAG,"tick timer");
     ESP_RETURN_ON_ERROR(esp_timer_start_periodic(timer,5000),TAG,"start tick");
-    // Backlight gate remains off until LCD initialization and PWM are ready.
-    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<1,1ULL<<1),TAG,"backlight gate on");
-    ESP_LOGI(TAG,"Backlight enabled at 20%%");
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<1,1ULL<<1),TAG,"backlight on");
     ready=true;
     ESP_LOGI(TAG,"V2 display/touch started, 640x172, PSRAM framebuffer");
     return ESP_OK;
