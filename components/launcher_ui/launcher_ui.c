@@ -64,15 +64,15 @@ void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {
     tile(home_page,332,&launcher_icon_remote,LAUNCHER_ACTION_REMOTE);
     tile(home_page,484,&launcher_icon_sd,LAUNCHER_ACTION_USB);
     usb_page=screen();
-    lv_obj_t *sd=lv_image_create(usb_page);
+    // Center SD icon + text as a single group, independent of line length.\n    lv_obj_t *group=lv_obj_create(usb_page);\n    lv_obj_set_size(group,510,110);\n    lv_obj_center(group);\n    lv_obj_set_style_bg_opa(group,LV_OPA_TRANSP,0);\n    lv_obj_set_style_border_width(group,0,0);\n    lv_obj_set_style_pad_all(group,0,0);\n    lv_obj_remove_flag(group,LV_OBJ_FLAG_SCROLLABLE);\n    lv_obj_t *sd=lv_image_create(group);
     lv_image_set_src(sd,&launcher_icon_sd_large);
-    lv_obj_align(sd,LV_ALIGN_LEFT_MID,48,0);
-    lv_obj_t *message=lv_label_create(usb_page);
-    lv_obj_set_width(message,420);
+    lv_obj_align(sd,LV_ALIGN_LEFT_MID,0,0);
+    lv_obj_t *message=lv_label_create(group);
+    lv_obj_set_width(message,402);
     lv_label_set_long_mode(message,LV_LABEL_LONG_WRAP);
     lv_label_set_text(message,"Connect this device to your computer\nwith a USB cable to manage TF card files.\nEject the disk before returning.");
     lv_obj_set_style_text_color(message,lv_color_hex(INK),0);
     lv_obj_set_style_text_font(message,&lv_font_montserrat_14,0);
-    lv_obj_align(message,LV_ALIGN_LEFT_MID,170,0);
+    lv_obj_align(message,LV_ALIGN_LEFT_MID,108,0);
     lv_screen_load(home_page);
 }

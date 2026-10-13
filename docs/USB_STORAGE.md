@@ -1,21 +1,20 @@
-# Launcher-only USB TF-card storage mode (planned)
+# USB TF Card MSC — Launcher utility
 
-**Final architecture decision:** NO fourth functional app, NO new OTA partition, NO Wi-Fi file transfer, NO server or syncing daemon. USB Mass Storage Class (MSC) lives inside Launcher as a seldom-used **utility** accessed through a **small fourth entry**. Three large cards are AI Chat, Home Assistant and Sony Remote.
+## Implemented (source code; not hardware verified)
+- Uses official Waveshare **V2** SD card mapping: SDMMC 1-bit CLK=GPIO41, CMD=GPIO39, D0=GPIO40 (from `Arduino/examples/04_SD_Card/sdcard_bsp.cpp`).
+- Initializes SDMMC and exports card via Espressif `esp_tinyusb` 2.0.1, `tinyusb_msc_new_storage_sdmmc()` and native USB OTG.
+- SD card is not locally mounted while exported. Automatic formatting explicitly disabled.
+- USB service belongs to Launcher only; no fourth OTA app, no Wi-Fi.
+- LCD layout uses black background and a centered icon+English instruction group.
 
-- Launcher always starts its 10-second inactivity countdown targeting HA.
-- Any tap cancels the countdown. A tap on the USB shortcut cancels it and opens a dedicated USB storage page.
-- Launcher USB mode is never automatically entered; it must be explicitly selected.
-- Desired Mac workflow: plug USB cable, enter USB storage, Finder mounts TF card, copy assets, **Eject** disk in Finder, safely leave USB mode. No card removal.
-- Exclusive storage ownership: ESP FATFS must be unmounted before exposing writable MSC; block ESP filesystem reads/writes while host owns card. Host eject/disconnect must be coordinated before remount. A raw USB disconnect alone is NOT guaranteed safe if writes were in progress.
-- Launcher must keep minimum UI fonts/icons in internal Flash so it can show the storage/recovery pages without TF resources.
-- Future implementation uses native USB OTG + TinyUSB MSC with hardware-verified Waveshare V2 USB wiring and SD interface. Avoid assumptions about USB Serial/JTAG port. MSC may replace active USB serial logging.
-- **Current code is intentionally fail-closed**: `components/usb_storage` is an API/ownership boundary only. `usb_storage_enter()` returns `ESP_ERR_NOT_SUPPORTED` until real drivers, exclusive ownership and safe eject are implemented. Finder will **not** see a disk yet. Do not present this as a working USB transfer implementation.
+## Known incomplete / safety boundaries
+**The project has no hardware-tested USB MSC yet.** The selected USB cable/port must use native S3 USB D- GPIO19 / D+ GPIO20; USB Serial/JTAG shares a PHY with USB OTG. Pin wiring/connector must be checked on Waveshare V2 schematic or hardware.
 
-Expected UI: three prominent mode cards plus a small USB icon/link; USB page shows card/host status and disallows exit until safe. No visual styling frozen yet.
+**Host-safe eject signal:** no reliable host eject acknowledgement has been connected yet. Back key must NOT tear down storage while `USB_STORAGE_EXPORTED`. To leave safely: eject from Finder, then restart the device or implement an explicit host-eject callback / safe-state indication and back key gate. Current `usb_storage_can_exit()` deliberately blocks exit during export. A USB cable disconnect alone is not interpreted as safe eject.
 
-References:
-- https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/usb-otg-console.html
+**Launcher hardware integration:** `board_support` is still a stub; USB is not yet triggered by a physical LVGL touch on device. Web preview simulates UI but cannot run USB MSC.
+
+## Official references
+- https://github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2/tree/main/Arduino/examples/04_SD_Card
 - https://docs.espressif.com/projects/esp-usb/en/latest/esp32s3/usb_device.html
-- https://github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2
-
-Acceptance tests after hardware bring-up: Mac Finder mounts; repeated copy/eject cycles preserve FAT; disconnect mid-transfer reports recovery; long files copy correctly; Launcher 10s HA policy remains unaffected; no SD filesystem access races.
+- https://components.espressif.com/components/espressif/esp_tinyusb/versions/2.0.1
