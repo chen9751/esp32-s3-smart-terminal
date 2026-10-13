@@ -1,1 +1,1 @@
-idf_component_register(SRCS "main.c" "ui/face_page.c" "ui/settings_page.c" "ui/ai_key.c" "ui/connection_page.c" INCLUDE_DIRS "." "ui" REQUIRES board_support mode_manager lvgl_kawaii_face lvgl driver esp_timer)
+idf_component_register(SRCS "main.c" "ui/face_page.c" "ui/settings_page.c" "ui/ai_key.c" "ui/connection_page.c" INCLUDE_DIRS "." "ui" REQUIRES board_support mode_manager lvgl_kawaii_face lvgl esp_driver_gpio esp_timer)
