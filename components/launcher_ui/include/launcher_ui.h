@@ -15,3 +15,6 @@ bool launcher_ui_usb_visible(void);
 
 // Call only after USB shutdown and storage checks return ESP_OK.
 void launcher_ui_confirm_usb_exit(void);
+
+// Release Launcher screens before locking an exclusive business mode.
+void launcher_ui_destroy(void);
