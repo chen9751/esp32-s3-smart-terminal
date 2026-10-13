@@ -17,3 +17,11 @@ USB screen: pale-blue rounded panel, SD icon on left, short English instructions
 **USB caution:** real USB MSC is currently a fail-closed stub; do not present as active connection. The Back key must not allow leaving while host still owns the filesystem in the final integration. See [USB_STORAGE.md](USB_STORAGE.md).
 
 Icons from Remix Icon (Apache-2.0), originals in `assets/remix/`.
+
+## Revision: black / outline squares
+
+- Launcher background: pure black `#000000`.
+- Four equal square cards: **124×124**, rounded 18px; black interior, 2px pastel-blue outline (`#9BD7F1`), centered light-blue Remix icons (`#B6E6FA`), **no text**.
+- Coordinates: x=24/180/336/492, y=24; 640×172 screen.
+- USB page: pure black background; **no panel or card**, left SD card icon, right English cable/eject instructions in pale blue.
+- Icons remain embedded in firmware; TF card copy is not required.

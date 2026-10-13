@@ -15,7 +15,7 @@ SPECS=[("robot","robot-2-line",54),("remote","remote-control-line",54),
 lines=['#include "launcher_icons.h"','#include "lvgl.h"']
 hdr=['#pragma once','#include "lvgl.h"']
 for key, name, size in SPECS:
-    svg=(ROOT/"assets/remix"/f"{name}.svg").read_text(encoding="utf-8").replace('fill="currentColor"','fill="#15465B"')
+    svg=(ROOT/"assets/remix"/f"{name}.svg").read_text(encoding="utf-8").replace('fill="currentColor"','fill="#B6E6FA"')
     png=cairosvg.svg2png(bytestring=svg.encode(),output_width=size,output_height=size)
     rgba=Image.open(BytesIO(png)).convert("RGBA")
     # Little endian ARGB8888 (BGRA byte order); premultiply channels as LVGL expects.
