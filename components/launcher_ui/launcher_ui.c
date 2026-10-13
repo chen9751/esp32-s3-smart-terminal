@@ -1,6 +1,7 @@
 #include "launcher_ui.h"
 #include "launcher_icons.h"
 #include <stdbool.h>
+#include <stdint.h>
 
 #define BG 0xEAF5FA
 #define CARD 0xB8DDEE
@@ -48,9 +49,6 @@ static void tile(lv_obj_t *parent,int x,const lv_image_dsc_t *src, launcher_acti
     lv_obj_add_event_cb(b,home_event,LV_EVENT_CLICKED,(void*)(uintptr_t)action);
     icon(b,src);
 }
-static void usb_back_event(lv_event_t *e) {
-    (void)e;launcher_ui_back();
-}
 void launcher_ui_back(void) {
     if (usb_visible) {
         usb_visible=false;
@@ -83,6 +81,5 @@ void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {
     lv_obj_set_style_text_color(message,lv_color_hex(INK),0);
     lv_obj_set_style_text_font(message,&lv_font_montserrat_14,0);
     lv_obj_align(message,LV_ALIGN_LEFT_MID,122,0);
-    lv_obj_add_event_cb(usb_page,usb_back_event,LV_EVENT_GESTURE,NULL);
     lv_screen_load(home_page);
 }
