@@ -25,3 +25,9 @@ Icons from Remix Icon (Apache-2.0), originals in `assets/remix/`.
 - Coordinates: x=24/180/336/492, y=24; 640×172 screen.
 - USB page: pure black background; **no panel or card**, left SD card icon, right English cable/eject instructions in pale blue.
 - Icons remain embedded in firmware; TF card copy is not required.
+
+## Visual polish: balanced layout and clear USB instructions
+
+- Four 128×128 cards, x = 28/180/332/484, y = 22. Screen margins: 28px horizontal and 22px vertical; three equal 24px gaps. Rounded radius 22px; outline 3px to visually balance 60px icon strokes.
+- All four main icons rendered at 60×60 in the same color; no captions or fills. USB information uses a separate 76px SD card icon on an otherwise plain black screen.
+- USB text contains **real line breaks** (not literal backslash-n); three concise English lines aligned beside the icon.

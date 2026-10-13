@@ -10,8 +10,9 @@ from PIL import Image
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/"components/launcher_ui/generated"
 OUT.mkdir(parents=True,exist_ok=True)
-SPECS=[("robot","robot-2-line",54),("remote","remote-control-line",54),
-       ("home","home-wifi-line",54),("sd","sd-card-mini-line",54)]
+SPECS=[("robot","robot-2-line",60),("remote","remote-control-line",60),
+       ("home","home-wifi-line",60),("sd","sd-card-mini-line",60),
+       ("sd_large","sd-card-mini-line",76)]
 lines=['#include "launcher_icons.h"','#include "lvgl.h"']
 hdr=['#pragma once','#include "lvgl.h"']
 for key, name, size in SPECS:

@@ -37,11 +37,11 @@ static void icon(lv_obj_t *parent,const lv_image_dsc_t *src) {
 }
 static void tile(lv_obj_t *parent,int x,const lv_image_dsc_t *src, launcher_action_t action) {
     lv_obj_t *b=lv_button_create(parent);
-    lv_obj_set_pos(b,x,24);
-    lv_obj_set_size(b,124,124);
-    lv_obj_set_style_radius(b,18,0);
+    lv_obj_set_pos(b,x,22);
+    lv_obj_set_size(b,128,128);
+    lv_obj_set_style_radius(b,22,0);
     lv_obj_set_style_bg_color(b,lv_color_hex(BG),0);
-    lv_obj_set_style_border_width(b,2,0);
+    lv_obj_set_style_border_width(b,3,0);
     lv_obj_set_style_border_color(b,lv_color_hex(EDGE),0);
     lv_obj_set_style_shadow_width(b,0,0);
     lv_obj_set_style_bg_color(b,lv_color_hex(0x102A37),LV_STATE_PRESSED);
@@ -59,20 +59,20 @@ bool launcher_ui_usb_visible(void) { return usb_visible; }
 void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {
     callback=cb;callback_ctx=ctx;usb_visible=false;
     home_page=screen();
-    tile(home_page,24,&launcher_icon_robot,LAUNCHER_ACTION_AI);
+    tile(home_page,28,&launcher_icon_robot,LAUNCHER_ACTION_AI);
     tile(home_page,180,&launcher_icon_home,LAUNCHER_ACTION_HA);
-    tile(home_page,336,&launcher_icon_remote,LAUNCHER_ACTION_REMOTE);
-    tile(home_page,492,&launcher_icon_sd,LAUNCHER_ACTION_USB);
+    tile(home_page,332,&launcher_icon_remote,LAUNCHER_ACTION_REMOTE);
+    tile(home_page,484,&launcher_icon_sd,LAUNCHER_ACTION_USB);
     usb_page=screen();
     lv_obj_t *sd=lv_image_create(usb_page);
-    lv_image_set_src(sd,&launcher_icon_sd);
-    lv_obj_align(sd,LV_ALIGN_LEFT_MID,44,0);
+    lv_image_set_src(sd,&launcher_icon_sd_large);
+    lv_obj_align(sd,LV_ALIGN_LEFT_MID,48,0);
     lv_obj_t *message=lv_label_create(usb_page);
-    lv_obj_set_width(message,430);
+    lv_obj_set_width(message,420);
     lv_label_set_long_mode(message,LV_LABEL_LONG_WRAP);
-    lv_label_set_text(message,"Connect this device to your computer\\nwith a USB cable to manage TF card files.\\nEject the disk before returning.");
+    lv_label_set_text(message,"Connect this device to your computer\nwith a USB cable to manage TF card files.\nEject the disk before returning.");
     lv_obj_set_style_text_color(message,lv_color_hex(INK),0);
     lv_obj_set_style_text_font(message,&lv_font_montserrat_14,0);
-    lv_obj_align(message,LV_ALIGN_LEFT_MID,150,0);
+    lv_obj_align(message,LV_ALIGN_LEFT_MID,170,0);
     lv_screen_load(home_page);
 }
