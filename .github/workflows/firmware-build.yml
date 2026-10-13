@@ -1,13 +1,13 @@
-name: ESP-IDF Firmware Build
+name: Single ESP-IDF Firmware Build
 on:
   push:
     branches: [main]
     paths:
-      - "apps/**"
+      - "apps/terminal/**"
       - "components/**"
       - "assets/remix/**"
       - "tools/generate_launcher_icons.py"
-      - "partitions/**"
+      - "partitions/single_app_16mb.csv"
       - ".github/workflows/firmware-build.yml"
   pull_request:
     branches: [main]
@@ -19,37 +19,38 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    name: Build ${{ matrix.app }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [launcher, ai_chat, home_assistant, sony_remote]
     steps:
       - uses: actions/checkout@v4
       - name: Generate embedded Launcher icons
         run: |
           python3 -m pip install --quiet pillow cairosvg
           python3 tools/generate_launcher_icons.py
-      - name: ESP-IDF 5.5.4 build
+      - name: Build single firmware (ESP-IDF 5.5.4)
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v5.5.4
           target: esp32s3
-          path: apps/${{ matrix.app }}
+          path: apps/terminal
           command: idf.py build
-      - name: Check binary size against its flash slot
+      - name: Check 8MiB factory slot
         shell: bash
         run: |
-          python3 tools/check_binary_size.py "${{ matrix.app }}" "apps/${{ matrix.app }}/build/${{ matrix.app }}.bin"
-      - name: Upload individual application image
+          python3 - <<'PY'
+          from pathlib import Path
+          image=Path('apps/terminal/build/smart_terminal.bin')
+          size=image.stat().st_size
+          assert size <= 0x800000, f'Image {size} exceeds 8MiB slot'
+          print(f'Image size: {size} / {0x800000} bytes')
+          PY
+      - name: Upload single firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-${{ matrix.app }}
+          name: smart-terminal-factory
           retention-days: 14
           if-no-files-found: error
           path: |
-            apps/${{ matrix.app }}/build/${{ matrix.app }}.bin
-            apps/${{ matrix.app }}/build/bootloader/bootloader.bin
-            apps/${{ matrix.app }}/build/partition_table/partition-table.bin
-            apps/${{ matrix.app }}/build/flasher_args.json
+            apps/terminal/build/smart_terminal.bin
+            apps/terminal/build/bootloader/bootloader.bin
+            apps/terminal/build/partition_table/partition-table.bin
+            apps/terminal/build/flasher_args.json
