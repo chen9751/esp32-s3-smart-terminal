@@ -98,6 +98,10 @@ esp_err_t board_support_init(void) {
     };
     ESP_RETURN_ON_ERROR(i2c_new_master_bus(&i0,&bus0),TAG,"expander I2C");
     ESP_RETURN_ON_ERROR(esp_io_expander_new_i2c_tca9554(bus0,ESP_IO_EXPANDER_I2C_TCA9554_ADDRESS_000,&expander),TAG,"TCA9554");
+    // V2 battery power latch: EXIO6=SYS_EN. Set high before lengthy LCD setup.
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_dir(expander,1ULL<<6,IO_EXPANDER_OUTPUT),TAG,"battery SYS_EN direction");
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<6,1ULL<<6),TAG,"battery SYS_EN latch");
+    ESP_LOGI(TAG,"Battery SYS_EN latched high on TCA9554 EXIO6");
     ESP_RETURN_ON_ERROR(esp_io_expander_set_dir(expander,(1ULL<<1)|(1ULL<<5),IO_EXPANDER_OUTPUT),TAG,"expander outputs");
     ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,(1ULL<<1),0),TAG,"backlight off");
     ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,(1ULL<<5),1),TAG,"LCD reset hi");
