@@ -1,32 +1,44 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "board_support.h"
 #include "mode_manager.h"
 #include "launcher_policy.h"
 #include "launcher_storage.h"
+#include "launcher_ui.h"
 #include "custom_key.h"
-#include "ui/home_page.h"
-#include "ui/settings_page.h"
-static const char *TAG = "launcher";
+#include "usb_storage.h"
+
+static const char *TAG="launcher";
+static void on_action(launcher_action_t a, void *ctx) {
+    (void)ctx;
+    launcher_policy_notify_activity();
+    if (a==LAUNCHER_ACTION_USB) {
+        esp_err_t e=launcher_storage_open();
+        ESP_LOGI(TAG,"USB enter: %s",esp_err_to_name(e));
+    } else if(a==LAUNCHER_ACTION_BACK) {
+        if(launcher_ui_usb_visible()) {
+            esp_err_t e=launcher_storage_close();
+            if(e==ESP_OK) launcher_ui_confirm_usb_exit();
+            else ESP_LOGW(TAG,"USB remains open: %s (eject on Mac first)",esp_err_to_name(e));
+        }
+    } else {
+        ESP_LOGI(TAG,"First-flash test: mode %d deliberately disabled",a);
+    }
+}
 void app_main(void) {
-    ESP_LOGI(TAG, "Launcher: factory");
-    ESP_ERROR_CHECK(board_support_init());
+    ESP_LOGI(TAG,"V2 standalone Launcher bring-up; no OTA switching in test");
     ESP_ERROR_CHECK(mode_manager_mark_valid_if_pending());
     ESP_ERROR_CHECK(custom_key_init());
-    home_page_show();
-    // TODO: move this call to the first fully rendered LVGL page-ready event.
-    launcher_policy_start();
-    ESP_LOGW(TAG, "Touch driver absent: countdown cannot yet be canceled by a real touch");
-    while (1) {
-        if (custom_key_poll_click()) {
-            launcher_policy_notify_activity();
-            // No LVGL hardware page is initialized in this phase-0 scaffold.
-            // USB exit remains gated by the storage ownership state.
-            if (usb_storage_can_exit()) launcher_storage_close();
-            else ESP_LOGW(TAG, "Back blocked: eject TF card from Mac first");
-        }
-        launcher_policy_process();
+    ESP_ERROR_CHECK(board_support_init());
+    launcher_ui_create(on_action,NULL);
+    ESP_LOGI(TAG,"Free internal=%u PSRAM=%u",heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                                             heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    // First-flash test: NO 10s auto HA and NO firmware switching.
+    while(1) {
+        if(custom_key_poll_click()) launcher_ui_back();
+        board_support_loop();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
