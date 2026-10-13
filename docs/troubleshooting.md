@@ -47,3 +47,6 @@ References:
 - https://docs.espressif.com/projects/esp-usb/en/latest/esp32s3/usb_device.html
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/usb-serial-jtag-console.html
 - https://github.com/espressif/esp-idf/issues/15912
+
+## 2026-10-13 black screen after backlight default 20%
+Device with commit 3c8beba started successfully and logged AXS15231B init, 8MB PSRAM allocation and LVGL startup, but screen went black around one second after restart and USB console disconnected/reconnected. No panic/backtrace in provided excerpt. Causality not confirmed. The only newly introduced display change was inverted GPIO42 LEDC duty (204 for 20% per official Waveshare V2 mapping). Diagnostic revision temporarily drives full brightness (duty=0) for two seconds **after LCD init**, then restores requested 20% (duty=204), with serial markers and reset reason. Compare visible behavior and capture full reset lines. Remove the two-second diagnostic after hardware verification. Do not assume that a USB monitor disconnection alone proves a panic or CPU reset.

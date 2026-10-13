@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "board_support.h"
 #include "mode_manager.h"
 #include "launcher_policy.h"
@@ -38,6 +39,7 @@ static void on_action(launcher_action_t a, void *ctx) {
 }
 void app_main(void) {
     ESP_LOGI(TAG,"V2 standalone Launcher bring-up; no OTA switching in test");
+    ESP_LOGI(TAG,"Reset reason=%d", (int)esp_reset_reason());
     ESP_ERROR_CHECK(mode_manager_mark_valid_if_pending());
     ESP_ERROR_CHECK(custom_key_init());
     ESP_ERROR_CHECK(board_support_init());
