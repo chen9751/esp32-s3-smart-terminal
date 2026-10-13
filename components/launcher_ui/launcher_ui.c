@@ -89,3 +89,11 @@ void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {
     lv_obj_align(message,LV_ALIGN_LEFT_MID,108,0);
     lv_screen_load(home_page);
 }
+
+void launcher_ui_destroy(void) {
+    callback = NULL;
+    callback_ctx = NULL;
+    if (home_page) { lv_obj_delete(home_page); home_page = NULL; }
+    if (usb_page) { lv_obj_delete(usb_page); usb_page = NULL; }
+    usb_visible = false;
+}
