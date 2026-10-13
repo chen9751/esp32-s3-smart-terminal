@@ -44,15 +44,21 @@ void app_main(void) {
     ESP_ERROR_CHECK(custom_key_init());
     ESP_ERROR_CHECK(board_support_init());
     launcher_ui_create(on_action,NULL);
+    ESP_LOGI(TAG,"Main stack free low-water=%u bytes",(unsigned)uxTaskGetStackHighWaterMark(NULL));
     ESP_LOGI(TAG,"Free internal=%u PSRAM=%u",heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                                              heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
     // First-flash test: NO 10s auto HA and NO firmware switching.
+    TickType_t next_report=xTaskGetTickCount()+pdMS_TO_TICKS(10000);
     while(1) {
         if(custom_key_poll_click()) {
             ESP_LOGI(TAG, "GPIO0 Back: USB state=%d", usb_storage_get_state());
             launcher_ui_back();
         }
         board_support_loop();
+        if(xTaskGetTickCount()>=next_report) {
+            ESP_LOGI(TAG,"Main stack low-water=%u bytes",(unsigned)uxTaskGetStackHighWaterMark(NULL));
+            next_report=xTaskGetTickCount()+pdMS_TO_TICKS(10000);
+        }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }

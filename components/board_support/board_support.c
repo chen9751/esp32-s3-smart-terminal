@@ -188,16 +188,7 @@ esp_err_t board_support_init(void) {
     ESP_RETURN_ON_ERROR(esp_timer_create(&args,&timer),TAG,"tick timer");
     ESP_RETURN_ON_ERROR(esp_timer_start_periodic(timer,5000),TAG,"start tick");
     ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<1,1ULL<<1),TAG,"backlight on");
-    // Hardware bring-up: demonstrate backlight PWM and confirm it remains alive.
-    // Official Waveshare V2 PWM is inverted (0 brightest, 255 darkest).
-    // Briefly show full brightness, then settle to user's 20% default.
-    ESP_RETURN_ON_ERROR(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, 0),TAG,"backlight test 100%");
-    ESP_RETURN_ON_ERROR(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1),TAG,"backlight test update");
-    ESP_LOGI(TAG,"Backlight check: 100%% for 2s, then default 20%%");
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    ESP_RETURN_ON_ERROR(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, 204),TAG,"backlight 20%");
-    ESP_RETURN_ON_ERROR(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1),TAG,"backlight update");
-    ESP_LOGI(TAG,"Backlight check: switched to 20%%");
+    ESP_LOGI(TAG,"Backlight enabled at 20%%");
     ready=true;
     ESP_LOGI(TAG,"V2 display/touch started, 640x172, PSRAM framebuffer");
     return ESP_OK;
