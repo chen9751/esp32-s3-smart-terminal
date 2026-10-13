@@ -67,7 +67,7 @@ void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {
     tile(home_page,332,&launcher_icon_remote,LAUNCHER_ACTION_REMOTE);
     tile(home_page,484,&launcher_icon_sd,LAUNCHER_ACTION_USB);
     usb_page=screen();
-    // Center SD icon + text as a single group, independent of line length.\n    lv_obj_t *group=lv_obj_create(usb_page);\n    lv_obj_set_size(group,510,110);\n    lv_obj_center(group);\n    lv_obj_set_style_bg_opa(group,LV_OPA_TRANSP,0);\n    lv_obj_set_style_border_width(group,0,0);\n    lv_obj_set_style_pad_all(group,0,0);\n    lv_obj_remove_flag(group,LV_OBJ_FLAG_SCROLLABLE);\n    lv_obj_t *sd=lv_image_create(group);
+    // Center the icon and copy together, without duplicate declarations.
     lv_obj_t *group = lv_obj_create(usb_page);
     lv_obj_set_size(group, 510, 110);
     lv_obj_center(group);
