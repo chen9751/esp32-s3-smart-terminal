@@ -1,19 +1,30 @@
-# Launcher icon generator — local macOS build
+# macOS local build: Cairo search-path troubleshooting
 
-The five compiled LVGL icon images are generated from tracked official Remix Icon SVG files. The `components/launcher_ui/generated/` directory is deliberately untracked. CMake now invokes `tools/generate_launcher_icons.py` **before** validating component include paths, so a fresh checkout can build without manually creating that directory.
+On macOS with Homebrew, `cairocffi` may load Cairo successfully when invoked
+directly, but still fail in the ESP-IDF CMake requirement subprocess. This is
+caused by differences in dynamic-library search environments, not by an absent
+Python wheel.
 
-Requirements in the ESP-IDF Python environment: `pillow` and `cairosvg`.
+The CMake component now **skips SVG conversion whenever the generated files
+already exist**, and explicitly supplies Homebrew's Cairo library path for
+Apple Silicon if generation is necessary. The recommended first-checkout fix is
+to generate once in your regular terminal before `idf.py build`:
 
 ```sh
 export IDF_PYTHON_ENV_PATH="$HOME/.espressif/python_env/idf5.5_py3.9_env"
 . "$HOME/esp/esp-idf/export.sh"
-python -m pip install pillow cairosvg
+export DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix cairo)/lib"
 cd ~/esp32-s3-smart-terminal
-git pull --ff-only
+python tools/generate_launcher_icons.py
+test -s components/launcher_ui/generated/launcher_icons.c
 cd apps/launcher
 idf.py build
 ```
 
-If CairoSVG reports a missing native Cairo dynamic library on macOS, install it with `brew install cairo` and retry. No TF card asset copy is required.
+The generated `launcher_icons.c` and `launcher_icons.h` are LVGL image data,
+not runtime TF card dependencies. Long-term improvement: check in those
+generated files to remove Cairo from the firmware build requirements.
 
-Prior failure: local fresh clone had no `generated` folder, so ESP-IDF CMake failed with `Include directory .../components/launcher_ui/generated is not a directory`. CI pre-generated icons but local build did not. Both builds now use the generator.
+Previously observed: on 2026-10-13 Python CLI printed `CairoSVG OK`, but the
+ESP-IDF CMake subprocess raised `OSError: no library called "cairo-2" was
+found`. Generate assets in the top-level user shell as above to bypass it.
