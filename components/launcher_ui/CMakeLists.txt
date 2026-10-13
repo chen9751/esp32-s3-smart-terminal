@@ -31,4 +31,4 @@ if(NOT EXISTS "${_icon_c}" OR NOT EXISTS "${_icon_h}")
     endif()
 endif()
 idf_component_register(SRCS "launcher_ui.c" "generated/launcher_icons.c"
- INCLUDE_DIRS "include" "generated" REQUIRES lvgl)
+ INCLUDE_DIRS "include" "generated" REQUIRES lvgl ui_theme)

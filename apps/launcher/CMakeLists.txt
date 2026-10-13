@@ -5,6 +5,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/usb_storage"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/usb_phy_restore"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/launcher_ui"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/ui_theme"
 )
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(launcher)

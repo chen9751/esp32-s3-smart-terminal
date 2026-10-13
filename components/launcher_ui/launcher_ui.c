@@ -1,11 +1,9 @@
 #include "launcher_ui.h"
 #include "launcher_icons.h"
+#include "terminal_theme.h"
 #include <stdbool.h>
 #include <stdint.h>
 
-#define BG 0x000000
-#define INK 0xB6E6FA
-#define EDGE 0x9BD7F1
 static launcher_action_cb_t callback;
 static void *callback_ctx;
 static lv_obj_t *home_page, *usb_page;
@@ -26,13 +24,15 @@ static lv_obj_t *screen(void) {
     lv_obj_t *s=lv_obj_create(NULL);
     lv_obj_remove_flag(s,LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_all(s,0,0);
-    lv_obj_set_style_bg_color(s,lv_color_hex(BG),0);
+    lv_obj_set_style_bg_color(s,lv_color_hex(TERMINAL_COLOR_BACKGROUND),0);
     lv_obj_set_style_border_width(s,0,0);
     return s;
 }
 static void icon(lv_obj_t *parent,const lv_image_dsc_t *src) {
     lv_obj_t *i=lv_image_create(parent);
     lv_image_set_src(i,src);
+    lv_obj_set_style_image_recolor(i,lv_color_hex(TERMINAL_COLOR_PRIMARY),0);
+    lv_obj_set_style_image_recolor_opa(i,LV_OPA_COVER,0);
     lv_obj_center(i);
 }
 static void tile(lv_obj_t *parent,int x,const lv_image_dsc_t *src, launcher_action_t action) {
@@ -40,11 +40,11 @@ static void tile(lv_obj_t *parent,int x,const lv_image_dsc_t *src, launcher_acti
     lv_obj_set_pos(b,x,22);
     lv_obj_set_size(b,128,128);
     lv_obj_set_style_radius(b,22,0);
-    lv_obj_set_style_bg_color(b,lv_color_hex(BG),0);
+    lv_obj_set_style_bg_color(b,lv_color_hex(TERMINAL_COLOR_BACKGROUND),0);
     lv_obj_set_style_border_width(b,3,0);
-    lv_obj_set_style_border_color(b,lv_color_hex(EDGE),0);
+    lv_obj_set_style_border_color(b,lv_color_hex(TERMINAL_COLOR_PRIMARY),0);
     lv_obj_set_style_shadow_width(b,0,0);
-    lv_obj_set_style_bg_color(b,lv_color_hex(0x102A37),LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(b,lv_color_hex(TERMINAL_COLOR_PRESSED),LV_STATE_PRESSED);
     lv_obj_add_event_cb(b,home_event,LV_EVENT_CLICKED,(void*)(uintptr_t)action);
     icon(b,src);
 }
@@ -77,12 +77,14 @@ void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {
     lv_obj_remove_flag(group, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_t *sd = lv_image_create(group);
     lv_image_set_src(sd,&launcher_icon_sd_large);
+    lv_obj_set_style_image_recolor(sd,lv_color_hex(TERMINAL_COLOR_PRIMARY),0);
+    lv_obj_set_style_image_recolor_opa(sd,LV_OPA_COVER,0);
     lv_obj_align(sd,LV_ALIGN_LEFT_MID,0,0);
     lv_obj_t *message=lv_label_create(group);
     lv_obj_set_width(message,402);
     lv_label_set_long_mode(message,LV_LABEL_LONG_WRAP);
     lv_label_set_text(message,"Connect this device to your computer\nwith a USB cable to manage TF card files.\nEject the disk before returning.");
-    lv_obj_set_style_text_color(message,lv_color_hex(INK),0);
+    lv_obj_set_style_text_color(message,lv_color_hex(TERMINAL_COLOR_TEXT),0);
     lv_obj_set_style_text_font(message,&lv_font_montserrat_14,0);
     lv_obj_align(message,LV_ALIGN_LEFT_MID,108,0);
     lv_screen_load(home_page);

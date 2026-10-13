@@ -4,19 +4,24 @@ Requires: pip install cairosvg pillow. Output is generated, no TF card required.
 """
 from pathlib import Path
 from io import BytesIO
+import re
 import cairosvg
 from PIL import Image
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/"components/launcher_ui/generated"
 OUT.mkdir(parents=True,exist_ok=True)
+THEME=(ROOT/"components/ui_theme/include/terminal_theme.h").read_text()
+match=re.search(r"^#define\s+TERMINAL_COLOR_PRIMARY\s+0x([0-9A-Fa-f]{6})",THEME,re.M)
+if not match: raise RuntimeError("Primary UI theme color missing")
+ICON_COLOR="#"+match.group(1)
 SPECS=[("robot","robot-2-line",60),("remote","remote-control-line",60),
        ("home","home-wifi-line",60),("sd","sd-card-mini-line",60),
        ("sd_large","sd-card-mini-line",76)]
 lines=['#include "launcher_icons.h"','#include "lvgl.h"']
 hdr=['#pragma once','#include "lvgl.h"']
 for key, name, size in SPECS:
-    svg=(ROOT/"assets/remix"/f"{name}.svg").read_text(encoding="utf-8").replace('fill="currentColor"','fill="#B6E6FA"')
+    svg=(ROOT/"assets/remix"/f"{name}.svg").read_text(encoding="utf-8").replace('fill="currentColor"',f'fill="{ICON_COLOR}"')
     png=cairosvg.svg2png(bytestring=svg.encode(),output_width=size,output_height=size)
     rgba=Image.open(BytesIO(png)).convert("RGBA")
     # Little endian ARGB8888 (BGRA byte order); premultiply channels as LVGL expects.

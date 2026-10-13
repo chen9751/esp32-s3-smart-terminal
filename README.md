@@ -25,6 +25,10 @@
 
 当前为**接口/页面占位骨架**：尚未接入微雪 V2 显示/触摸/音频/IMU 驱动，故运行时仅打印日志，不会渲染屏幕；不可把构建骨架误认为四模式已完成。分区预算在测试 WakeNet 模型大小之后重新确认。
 
+## 全局 UI 主题
+
+**纯黑背景 `#000000` + 冰川青蓝主色 `#78DCE8`**。Launcher、AI、HA、Sony Remote 所有后续页面统一使用 `components/ui_theme/include/terminal_theme.h`，详见 [UI 色彩规范](docs/UI_COLOR_THEME.md)。
+
 ## 设计纪律
 
 1. UI **一个页面一个 `.c/.h`**，页面间通过明确接口调用，业务逻辑与视图分离。
