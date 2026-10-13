@@ -60,3 +60,10 @@ User confirmed firmware 0700bfd reaches 41 seconds, PSRAM is healthy, main task 
 ## 2026-10-13 native USB monitor loss after MSC (confirmed limitation)
 After Finder eject and GPIO0 Back, the user confirmed the Launcher returns but /dev/cu.usbmodem serial console does not recover, including after esp_restart(). This follows the shared internal PHY on ESP32-S3: USB-OTG TinyUSB and fixed-function USB Serial/JTAG cannot both drive the same PHY. Official Espressif esp-idf issue #15912 (closed, root driver regression from 5.3.3) reproduces that tinyusb_driver_uninstall + usb_new_phy(SERIAL_JTAG) does not switch back on 5.3.3/5.4.1/5.5-dev. There is no validated 5.5.4 in-place software restoration for this board. Do NOT assume esp_restart() restores the port and do NOT write undocumented USB peripheral registers or eFuses. Remove that ineffective reboot from Launcher. Keep the safety gate for MSC eject and cleanup, leaving app running. For reflash, physically reset the board (or BOOT+RESET for ROM download), then identify /dev/cu.usbmodem* and run idf.py flash. Console persistence across MSC in a future version requires a composite TinyUSB CDC+MSC and corresponding debug/flashing redesign, or dedicated external USB-UART / PHY hardware; TinyUSB CDC is not equivalent to the ROM USB Serial/JTAG download port.
 References: https://docs.espressif.com/projects/esp-usb/en/latest/esp32s3/usb_device.html ; https://github.com/espressif/esp-idf/issues/15912
+
+## 单固件迁移记录（2026-10-14）
+
+- **旧 AI 固件重启回 Launcher**：串口日志确认先跳转 `ota_0` 成功，随后 AI 的独立 `sdkconfig` 没有启用 OPI PSRAM，`board_support_init()` 因 `PSRAM=0`、`ESP_ERR_NO_MEM` 中止。单固件只维护 `apps/terminal/sdkconfig.defaults`，但仍需在新工程实际 `sdkconfig` 与启动日志核对 `CONFIG_SPIRAM`、8MiB PSRAM。
+- **AI 设置页首次编译错误**：`lv_font_montserrat_12` 未启用，已改为现有 `lv_font_montserrat_14` 并删除未使用变量。
+- **编译环境**：macOS 若 ESP-IDF 误选不存在的 Python 3.14 venv，先设置正确的 `IDF_PYTHON_ENV_PATH`（此前为 `$HOME/.espressif/python_env/idf5.5_py3.9_env`）再 source；Cairo 生成错误参见 `docs/LOCAL_BUILD.md`。
+- **分区迁移**：旧设备 `factory=0x20000`、`ota_0=0x160000`；新单固件 factory 草案 `0x10000`，且无 OTA。必须等待新工程编译及分区验证通过、备份旧版以后才实施 USB 全量烧录，严禁把单应用镜像直接写进旧多固件 slot。
