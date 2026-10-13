@@ -23,3 +23,10 @@ Run 38395348167 (Launcher) and 38395348193 (Web): `sd` / `group` undeclared in `
 
 ## V2 custom key
 Waveshare V2 factory `button_bsp.c` maps BOOT/custom key via `EXAMPLE_PIN_NUM_BOOT0` = GPIO0 (active low). Power button maps `EXAMPLE_PIN_NUM_SYS_OUT` = GPIO16. Added debounced GPIO0 single-click input to Launcher. Reset is hardware-only; don't treat it as the Back key. Hardware behavior still requires testing. Source: https://github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2/tree/main/ESP-IDF/11_FactoryProgram .
+
+## 2026-10-13 first-flash reboot loop (PSRAM disabled)
+Actual on-device serial log: `lcd_panel.axs15231b: send init commands success`, then `ESP_ERR_NO_MEM` from `board_support_init()`, and a reboot loop. Root cause: `apps/launcher/sdkconfig.defaults` did not enable external PSRAM, but `board_support.c` allocates **two 640×172 RGB565 framebuffers** (2×220160 bytes) with `MALLOC_CAP_SPIRAM`. `flash_id` detecting embedded 8 MB PSRAM does NOT mean ESP-IDF enabled it.
+
+Fix: explicitly set `CONFIG_SPIRAM=y`, `CONFIG_SPIRAM_MODE_OCT=y`, and `CONFIG_SPIRAM_USE_MALLOC=y` in launcher defaults; log free/largest PSRAM prior to allocations. For an existing local `sdkconfig`, **defaults do not override previous settings**: run `idf.py reconfigure` and confirm `grep '^CONFIG_SPIRAM' sdkconfig`; if `# CONFIG_SPIRAM is not set` persists, back up or remove the **generated local sdkconfig** and run `idf.py build` so defaults regenerate it. Never remove project `sdkconfig.defaults`.
+
+Boot log before fix confirms app partition at 0x20000 and successful LCD init commands; display/touch and DMA remain unverified, so verify after next flash.

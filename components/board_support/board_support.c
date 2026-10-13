@@ -132,10 +132,21 @@ esp_err_t board_support_init(void) {
     ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<5,1ULL<<5),TAG,"reset release");
     vTaskDelay(pdMS_TO_TICKS(30));
     ESP_RETURN_ON_ERROR(esp_lcd_panel_init(panel),TAG,"panel init");
+    ESP_LOGI(TAG,"Before LVGL buffers: PSRAM=%u, internal=%u, largest PSRAM=%u",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+    if (heap_caps_get_free_size(MALLOC_CAP_SPIRAM) < BUF_BYTES*2) {
+        ESP_LOGE(TAG,"PSRAM unavailable or insufficient; enable CONFIG_SPIRAM and rebuild");
+        return ESP_ERR_NO_MEM;
+    }
     frame_buf=heap_caps_malloc(BUF_BYTES,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
     rot_buf=heap_caps_malloc(BUF_BYTES,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
     dma_buf=heap_caps_malloc(FLUSH_BYTES,MALLOC_CAP_DMA|MALLOC_CAP_INTERNAL);
-    if(!frame_buf||!rot_buf||!dma_buf) return ESP_ERR_NO_MEM;
+    if(!frame_buf||!rot_buf||!dma_buf) {
+        ESP_LOGE(TAG,"Frame allocations failed: fb=%p rotate=%p dma=%p",frame_buf,rot_buf,dma_buf);
+        return ESP_ERR_NO_MEM;
+    }
     display=lv_display_create(LOG_W,LOG_H);
     lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
     lv_display_set_buffers(display,frame_buf,NULL,BUF_BYTES,LV_DISPLAY_RENDER_MODE_FULL);
