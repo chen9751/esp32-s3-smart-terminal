@@ -57,3 +57,12 @@
 ## Launcher UI 视觉规范（2026-10-13）
 
 640×172 浅蓝色主题，**四个等大的圆角图标卡片，卡片不显示文字**，顺序为 robot-2-line（AI）、home-wifi-line（HA）、remote-control-line（Sony）、sd-card-mini-line（USB）。USB 页面左侧为 SD 图标，右侧英语连接说明；自定义实体键单击全局返回。真实硬件按键/显示/USB MSC 尚待接入，浏览器预览已改为共享 LVGL UI 模块。全部四个图标为内置资源，**无需拷贝到 TF 卡**。详见 [LAUNCHER_UI.md](docs/LAUNCHER_UI.md)。
+
+### Experimental USB Serial/JTAG recovery after Mac TF eject (firmware 96fce41+)
+
+- Normal: Finder **Eject** TF disk, wait until eject finishes, press physical GPIO0 Back. The USB MSC storage/driver must be fully released before recovery.
+- An independent `components/usb_phy_restore` helper now resets the S3 USB OTG peripheral, restores RTC USB PHY routing to fixed USB Serial/JTAG and triggers USB host re-enumeration on GPIO19/20. This is modeled after Espressif Arduino-ESP32's `usb_switch_to_cdc_jtag()` but is **an experimental port to ESP-IDF 5.5.4**.
+- Expected if successful: Mac shows `/dev/cu.usbmodem*` again without pressing RESET, then fresh `idf.py monitor` can attach. The original monitor may not auto-reconnect.
+- If no port: check `ls /dev/cu.usbmodem*`; press RESET or BOOT+RESET to re-enter ROM download mode for flashing. No data on TF should be corrupted by this recovery since it runs only after a safe eject and complete MSC shutdown.
+- A PHY timeout logs a warning, without restarting or blocking Launcher. **Not yet hardware validated.** Avoid assuming this fixed the console until physical re-enumeration and normal esptool flashing are confirmed.
+- Reference: [Espressif official Arduino-ESP32 USB switch source](https://github.com/espressif/arduino-esp32/blob/master/cores/esp32/esp32-hal-tinyusb.c).
