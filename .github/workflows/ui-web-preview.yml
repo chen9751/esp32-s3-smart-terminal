@@ -4,7 +4,9 @@ on:
     branches: [main]
     paths:
       - "web_preview/**"
-      - "apps/launcher/main/ui/**"
+      - "components/launcher_ui/**"
+      - "assets/remix/**"
+      - "tools/generate_launcher_icons.py"
       - ".github/workflows/ui-web-preview.yml"
   workflow_dispatch:
 permissions:
@@ -24,6 +26,10 @@ jobs:
         with:
           version: "4.0.15"
           actions-cache-folder: emsdk-cache
+      - name: Generate embedded Remix SVG icons
+        run: |
+          python -m pip install --quiet pillow cairosvg
+          python tools/generate_launcher_icons.py
       - name: Configure LVGL 9.2.2 WebAssembly preview
         run: emcmake cmake -S web_preview -B web_preview/build -DCMAKE_BUILD_TYPE=Release
       - name: Build preview

@@ -53,3 +53,7 @@
 ## USB TF 卡管理（Launcher 内）
 
 入口布局：**3 个大卡片 + 1 个小型 USB 存储按钮**。插线并手动进入后，计划由 Mac Finder 直接管理 TF 卡，需先在 Finder 中安全弹出再退出。已建立 `components/usb_storage` 与 Launcher 独立页面和流程接口，**当前只是拒绝未实现操作的安全占位，尚不能让 Mac 识别为磁盘**。后续实现见 [USB 存储设计](docs/USB_STORAGE.md)。没有第四个功能固件、没有 Wi-Fi 文件管理。
+
+## Launcher UI 视觉规范（2026-10-13）
+
+640×172 浅蓝色主题，**四个等大的圆角图标卡片，卡片不显示文字**，顺序为 robot-2-line（AI）、home-wifi-line（HA）、remote-control-line（Sony）、sd-card-mini-line（USB）。USB 页面左侧为 SD 图标，右侧英语连接说明；自定义实体键单击全局返回。真实硬件按键/显示/USB MSC 尚待接入，浏览器预览已改为共享 LVGL UI 模块。全部四个图标为内置资源，**无需拷贝到 TF 卡**。详见 [LAUNCHER_UI.md](docs/LAUNCHER_UI.md)。

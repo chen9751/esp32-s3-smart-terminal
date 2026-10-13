@@ -1,5 +1,5 @@
 #include "lvgl.h"
-#include "preview_home.h"
+#include "launcher_ui.h"
 #include <SDL.h>
 #include <emscripten.h>
 #include <stdbool.h>
@@ -31,9 +31,14 @@ static void pointer(lv_indev_t *input, lv_indev_data_t *data) {
     data->point.y = mouse_y;
     data->state = pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
 }
+static void preview_action(launcher_action_t a, void *ctx) {
+    (void)ctx;
+    SDL_Log("Launcher UI preview action: %d (USB MSC/firmware switches disabled in browser)", (int)a);
+}
 static void frame(void) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_KEYDOWN && (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_BACKSPACE)) { launcher_ui_back(); }
         if (event.type == SDL_MOUSEMOTION) { mouse_x = event.motion.x; mouse_y = event.motion.y; }
         else if (event.type == SDL_MOUSEBUTTONDOWN) {
             mouse_x = event.button.x; mouse_y = event.button.y; pressed = true;
@@ -68,7 +73,7 @@ int main(void) {
     lv_indev_t *input = lv_indev_create();
     lv_indev_set_type(input, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(input, pointer);
-    preview_home_create();
+    launcher_ui_create(preview_action, NULL);
     last_tick = SDL_GetTicks();
     emscripten_set_main_loop(frame, 0, 1);
     return 0;
