@@ -31,6 +31,9 @@ static void on_action(launcher_action_t a, void *ctx) {
             }
             else ESP_LOGW(TAG,"USB remains open: %s (eject on Mac first)",esp_err_to_name(e));
         }
+    } else if (a == LAUNCHER_ACTION_AI) {
+        esp_err_t e = launcher_policy_select_mode(MODE_AI_CHAT);
+        if (e != ESP_OK) ESP_LOGE(TAG, "AI Chat launch failed: %s", esp_err_to_name(e));
     } else {
         ESP_LOGI(TAG,"First-flash test: mode %d deliberately disabled",a);
     }
