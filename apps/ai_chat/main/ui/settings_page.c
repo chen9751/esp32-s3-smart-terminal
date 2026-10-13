@@ -5,7 +5,7 @@
 #include "esp_timer.h"
 #include <stdbool.h>
 #include <stdint.h>
-static lv_obj_t *root, *body, *tabs[6], *value;
+static lv_obj_t *root, *body, *tabs[6];
 static int selected;
 static int64_t last_input;
 static lv_timer_t *timeout_timer;
@@ -50,7 +50,7 @@ void ai_settings_page_show(void){
   lv_obj_set_style_radius(tabs[i],0,0);lv_obj_set_style_border_width(tabs[i],0,0);
   lv_obj_add_event_cb(tabs[i],choose,LV_EVENT_CLICKED,(void*)(intptr_t)i);
   lv_obj_t *name=lv_label_create(tabs[i]);lv_label_set_text(name,names[i]);
-  lv_obj_set_style_text_font(name,&lv_font_montserrat_12,0);
+  lv_obj_set_style_text_font(name,&lv_font_montserrat_14,0);
   lv_obj_set_style_text_color(name,lv_color_hex(CYAN),0);lv_obj_center(name);
  }
  selected=0;populate();ai_settings_page_touch();
