@@ -1,10 +1,15 @@
-# Power-on defaults and validation
+# Boot defaults (Waveshare ESP32-S3-Touch-LCD-3.49-V2)
 
-- Intended LCD brightness: **20%**, not yet validated on this physical board.
-- Intended playback volume: **90%**, a shared policy constant; Launcher initializes no codec and cannot set actual audio volume.
-- LCD bring-up temporarily uses the **last known-good TCA9554 backlight enable** sequence, matching firmware 50bd0cd where display and touch were observed working. GPIO42 LEDC PWM was introduced by 3c8beba and immediately correlated with black screens; changing LEDC source clock and init order did not resolve it. Therefore remove the entire speculative PWM initializer, rather than leaving it silently in the build. **Current firmware does NOT implement the 20% physical brightness target**.
-- For future brightness control, isolate backlight hardware with a dedicated test build, confirm polarity and effective duty range on the actual V2 board, then reintroduce a reusable brightness setter tested at 100% -> 50% -> 20%. Avoid modifying LVGL, LCD QSPI or SD logic in that experiment.
-- When returning from native USB MSC on ESP32-S3, the USB Serial/JTAG port may not automatically recover. Restart/reconnect/enter download mode as needed.
+Display brightness **20%** is applied when Launcher initializes; volume **90%** is the shared playback policy for audio-capable modes.
 
-## Battery-only boot (Waveshare V2, Case A 18650)
-Official Waveshare V2 `Arduino/examples/07_BATT_PWR_Test` holds battery power through TCA9554 `EXAMPLE_EXIO_PIN_SYS_EN = (1ULL << 6)`. Pressing the PWR button starts the board; firmware MUST configure EXIO6 as output and drive HIGH as early as possible after I2C expander setup, before the PWR button is released. `EXAMPLE_PIN_NUM_SYS_OUT = GPIO_NUM_16` is the PWR button sense line, not the power-hold output; GPIO0 is the separate BOOT/back button. Our previous board_support omitted EXIO6 and worked on USB but could not latch 18650 power. This commit restores the official power latch, without changing the known-good LCD or backlight gate. To test, boot with USB power, disconnect USB, then press and HOLD the PWR button until the Launcher appears; release and confirm it stays on. Check charged battery and polarity if unsuccessful. Do not switch SYS_EN LOW unless intentionally implementing an orderly shutdown.
+## Brightness implementation
+
+This firmware uses the proven brightness mapping from previous user project [chen9751/esp32-ai-robot](https://github.com/chen9751/esp32-ai-robot/blob/main/components/board/board.c), specifically `board_backlight_set_percent`. GPIO42 is active-low PWM at 50kHz, 8 bits. Low raw duty output had been below the V2 panel's visible threshold, which caused the newer firmware to appear black when 20% was naively converted to duty 204.
+
+The old project's visible-range calibration maps positive user brightness to raw brightness **90..255**. Output duty = 255 - raw brightness. A requested 20% corresponds to ~PWM duty **133**. `0%` disables through the TCA9554 EXIO1 backlight gate.
+
+LCD panel and PSRAM initialization and the TCA9554 battery SYS_EN latch are unchanged. After panel initialization configure LEDC off at duty255; after LVGL display setup set brightness to the user default 20% using a reusable setter. This is source parity with the old project, and **requires first physical verification on this new firmware**.
+
+## Volume
+
+The old project's [audio_service.c](https://github.com/chen9751/esp32-ai-robot/blob/main/components/audio/audio_service.c) uses `AUDIO_DEFAULT_VOLUME=90` and sets `esp_codec_dev_set_out_vol(playback,90)` after ES8311 initialization. The independent Launcher has no audio codec driver or playback service; it stores the same value in `BOARD_BOOT_VOLUME_PERCENT` but cannot apply volume on the hardware until AI/HA audio service creation. Do not initialize the mic or power amplifiers needlessly on launcher.

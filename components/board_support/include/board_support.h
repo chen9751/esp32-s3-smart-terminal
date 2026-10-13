@@ -8,3 +8,7 @@
 esp_err_t board_support_init(void);
 void board_support_loop(void);
 bool board_support_ready(void);
+
+// Gamma-independent visible brightness range calibrated in the previous V2 project.
+esp_err_t board_backlight_set_percent(uint8_t percent);
+uint8_t board_backlight_get_percent(void);

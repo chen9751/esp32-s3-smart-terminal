@@ -8,6 +8,7 @@
 #include "esp_heap_caps.h"
 #include "freertos/task.h"
 #include "driver/spi_master.h"
+#include "driver/ledc.h"
 #include "driver/i2c_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -34,6 +35,8 @@ static uint8_t *dma_buf;
 static bool ready;
 static uint32_t flush_errors;
 static SemaphoreHandle_t flush_done;
+static bool s_backlight_ready;
+static uint8_t s_backlight_percent;
 
 static const axs15231b_lcd_init_cmd_t lcd_init_cmds[] = {
     {0x11, (uint8_t[]){0}, 0, 100},
@@ -86,6 +89,54 @@ static void touch_read(lv_indev_t *indev,lv_indev_data_t *data) {
 static void tick(void *arg){(void)arg;lv_tick_inc(5);}
 bool board_support_ready(void){return ready;}
 void board_support_loop(void){if(ready) lv_timer_handler();}
+static esp_err_t backlight_init(void)
+{
+    // Adopt the previous project's measured, visible-range mapping.
+    // Keep backlight dark until the LCD is ready.
+    const ledc_timer_config_t timer = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .duty_resolution = LEDC_TIMER_8_BIT,
+        .timer_num = LEDC_TIMER_3,
+        .freq_hz = 50000,
+        .clk_cfg = LEDC_AUTO_CLK,
+    };
+    ESP_RETURN_ON_ERROR(ledc_timer_config(&timer), TAG, "backlight timer");
+    const ledc_channel_config_t channel = {
+        .gpio_num = GPIO_NUM_42,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = LEDC_CHANNEL_1,
+        .intr_type = LEDC_INTR_DISABLE,
+        .timer_sel = LEDC_TIMER_3,
+        .duty = 255,
+        .hpoint = 0,
+        .flags = { .output_invert = 0 },
+    };
+    ESP_RETURN_ON_ERROR(ledc_channel_config(&channel), TAG, "backlight channel");
+    s_backlight_ready = true;
+    return ESP_OK;
+}
+
+esp_err_t board_backlight_set_percent(uint8_t percent)
+{
+    if (!s_backlight_ready || !expander) return ESP_ERR_INVALID_STATE;
+    if (percent > 100) percent = 100;
+    uint32_t brightness = 0;
+    if (percent > 0) {
+        const uint32_t min_visible = 90;
+        brightness = min_visible +
+                     ((uint32_t)(percent - 1) * (255 - min_visible) + 49) / 99;
+    }
+    const uint32_t duty = 255 - brightness;
+    ESP_RETURN_ON_ERROR(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty), TAG, "backlight duty");
+    ESP_RETURN_ON_ERROR(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1), TAG, "backlight update");
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander, 1ULL<<1, percent ? 1ULL<<1 : 0), TAG, "backlight enable");
+    s_backlight_percent = percent;
+    ESP_LOGI(TAG, "Backlight duty=%lu/255, percent=%u", (unsigned long)duty, (unsigned)percent);
+    return ESP_OK;
+}
+
+uint8_t board_backlight_get_percent(void) { return s_backlight_percent; }
+
 esp_err_t board_support_init(void) {
     lv_init();
     flush_done=xSemaphoreCreateBinary();
@@ -136,6 +187,7 @@ esp_err_t board_support_init(void) {
     ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<5,1ULL<<5),TAG,"reset release");
     vTaskDelay(pdMS_TO_TICKS(30));
     ESP_RETURN_ON_ERROR(esp_lcd_panel_init(panel),TAG,"panel init");
+    ESP_RETURN_ON_ERROR(backlight_init(), TAG, "backlight PWM");
     ESP_LOGI(TAG,"Before LVGL buffers: PSRAM=%u, internal=%u, largest PSRAM=%u",
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
@@ -163,7 +215,7 @@ esp_err_t board_support_init(void) {
     esp_timer_handle_t timer;
     ESP_RETURN_ON_ERROR(esp_timer_create(&args,&timer),TAG,"tick timer");
     ESP_RETURN_ON_ERROR(esp_timer_start_periodic(timer,5000),TAG,"start tick");
-    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(expander,1ULL<<1,1ULL<<1),TAG,"backlight on");
+    ESP_RETURN_ON_ERROR(board_backlight_set_percent(BOARD_BOOT_BRIGHTNESS_PERCENT),TAG,"default brightness");
     ready=true;
     ESP_LOGI(TAG,"V2 display/touch started, 640x172, PSRAM framebuffer");
     return ESP_OK;
