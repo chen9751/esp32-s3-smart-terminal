@@ -70,3 +70,11 @@
 - If no port: check `ls /dev/cu.usbmodem*`; press RESET or BOOT+RESET to re-enter ROM download mode for flashing. No data on TF should be corrupted by this recovery since it runs only after a safe eject and complete MSC shutdown.
 - A PHY timeout logs a warning, without restarting or blocking Launcher. **Not yet hardware validated.** Avoid assuming this fixed the console until physical re-enumeration and normal esptool flashing are confirmed.
 - Reference: [Espressif official Arduino-ESP32 USB switch source](https://github.com/espressif/arduino-esp32/blob/master/cores/esp32/esp32-hal-tinyusb.c).
+
+## AI Chat UI 迁移（开发分支，2026-10-14）
+
+- 仅迁移旧仓库 `chen9751/esp32-ai-robot` 已针对 PSRAM 优化的 `components/lvgl_kawaii_face`（含 MIT 许可）；其他旧服务、音频、网络代码不迁移。
+- AI 主页面：640×172 黑色背景与 17 种 Kawaii 表情，当前默认 Neutral、自动眨眼。情绪由 `face_page_preview_emotion()` 提供调用接口，目前未接入云模型。
+- 独立精简设置 UI：沿用旧设置页底部六栏布局及青蓝色视觉；当前全部为 UI 占位，**设置值尚未接入保存及模型配置**。
+- GPIO0 长按 800ms 开启设置；设置中短按返回或 10 秒不操作返回表情。按键由 AI 应用单独处理，不修改 Launcher 按键行为。
+- AI 显示使用现有 `board_support`；本分支尚未在实物硬件上编译/烧录验证，不能当作已验证固件。
