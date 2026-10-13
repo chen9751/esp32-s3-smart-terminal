@@ -6,6 +6,7 @@
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
 #include "tinyusb_msc.h"
+#include "usb_phy_restore.h"
 
 #define TF_CLK 41
 #define TF_CMD 39
@@ -105,5 +106,11 @@ esp_err_t usb_storage_exit(void) {
     cleanup();
     if (storage || usb_driver_installed || msc_driver_installed) return ESP_ERR_INVALID_STATE;
     state=USB_STORAGE_IDLE;
+    // On S3 USB-OTG and USB Serial/JTAG share the internal PHY. Restore
+    // only when TinyUSB and the SD storage handles have been released.
+    esp_err_t phy_err = usb_phy_restore_serial_jtag();
+    if (phy_err != ESP_OK) {
+        ESP_LOGW(TAG, "MSC closed but USB Serial/JTAG recovery unconfirmed: %s", esp_err_to_name(phy_err));
+    }
     return ESP_OK;
 }
