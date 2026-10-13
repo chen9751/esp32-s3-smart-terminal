@@ -23,13 +23,11 @@ static void on_action(launcher_action_t a, void *ctx) {
         if(launcher_ui_usb_visible()) {
             esp_err_t e=launcher_storage_close();
             if(e==ESP_OK) {
-                // On ESP32-S3, TinyUSB OTG and USB Serial/JTAG share the PHY.
-                // Driver uninstall does not reliably hand it back on IDF 5.5.
-                // A controlled restart restores the original console and Launcher.
+                // ESP-IDF 5.5: esp_restart() does not reliably restore
+                // the USB Serial/JTAG controller after USB-OTG TinyUSB.
+                // Do not reset a successfully running Launcher for no benefit.
                 launcher_ui_confirm_usb_exit();
-                ESP_LOGI(TAG,"USB safely closed; restarting Launcher to restore USB Serial/JTAG");
-                vTaskDelay(pdMS_TO_TICKS(250));
-                esp_restart();
+                ESP_LOGI(TAG,"USB safely closed; Launcher active (native console recovery unsupported)");
             }
             else ESP_LOGW(TAG,"USB remains open: %s (eject on Mac first)",esp_err_to_name(e));
         }
