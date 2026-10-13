@@ -3,6 +3,7 @@
 #include "ui/ai_settings.h"
 #include "ui/mode_placeholder.h"
 #include "esp_log.h"
+#include "usb_storage.h"
 static terminal_mode_t current=TERMINAL_LAUNCHER;
 static const char *TAG="app_manager";
 static void selection(launcher_action_t action,void *unused){(void)unused;app_manager_select(action);}
@@ -15,14 +16,26 @@ void app_manager_select(launcher_action_t action){
  if(action==LAUNCHER_ACTION_AI)current=TERMINAL_AI;
  else if(action==LAUNCHER_ACTION_HA)current=TERMINAL_HA;
  else if(action==LAUNCHER_ACTION_REMOTE)current=TERMINAL_SONY;
- else return; /* USB handled as Launcher utility in later milestone. */
+ else if(action==LAUNCHER_ACTION_USB){
+  esp_err_t e=usb_storage_enter();
+  if(e!=ESP_OK)ESP_LOGE(TAG,"USB MSC enter failed: %s",esp_err_to_name(e));
+  return;
+ } else return;
  ESP_LOGI(TAG,"Mode locked %d; RESET to Launcher",(int)current);
  /* Clear Launcher screen on entering mode. Preserve LVGL display & touch. */
- lv_obj_t *s=lv_screen_active();lv_obj_clean(s);
+ lv_obj_t *s=lv_obj_create(NULL);
+ lv_screen_load(s);
+ launcher_ui_destroy();
  if(current==TERMINAL_AI)terminal_ai_face_show();
  else placeholder_show(current==TERMINAL_HA?PLACEHOLDER_HA:PLACEHOLDER_SONY);
 }
 void app_manager_back(void){
  if(current==TERMINAL_AI&&terminal_ai_settings_visible())terminal_ai_settings_hide();
- else if(current==TERMINAL_LAUNCHER)launcher_ui_back();
+ else if(current==TERMINAL_LAUNCHER){
+  if(launcher_ui_usb_visible()){
+   esp_err_t e=usb_storage_exit();
+   if(e==ESP_OK)launcher_ui_confirm_usb_exit();
+   else ESP_LOGW(TAG,"USB eject required before exit: %s",esp_err_to_name(e));
+  }
+ }
 }
