@@ -3,6 +3,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/board_support"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/mode_manager"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/usb_storage"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/usb_phy_restore"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/launcher_ui"
 )
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
