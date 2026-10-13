@@ -30,3 +30,8 @@ Actual on-device serial log: `lcd_panel.axs15231b: send init commands success`, 
 Fix: explicitly set `CONFIG_SPIRAM=y`, `CONFIG_SPIRAM_MODE_OCT=y`, and `CONFIG_SPIRAM_USE_MALLOC=y` in launcher defaults; log free/largest PSRAM prior to allocations. For an existing local `sdkconfig`, **defaults do not override previous settings**: run `idf.py reconfigure` and confirm `grep '^CONFIG_SPIRAM' sdkconfig`; if `# CONFIG_SPIRAM is not set` persists, back up or remove the **generated local sdkconfig** and run `idf.py build` so defaults regenerate it. Never remove project `sdkconfig.defaults`.
 
 Boot log before fix confirms app partition at 0x20000 and successful LCD init commands; display/touch and DMA remain unverified, so verify after next flash.
+
+## 2026-10-13 USB eject and physical Back fix
+Real-device test: screen/touch, 8MB PSRAM, Mac Finder SD mount succeeded. When TinyUSB MSC takes the native USB peripheral, the USB-Serial/JTAG monitor disconnects (`Device not configured`). That does not by itself indicate an ESP32 reboot.
+
+The cause of Back remaining blocked after Finder eject was that MSC state never changed from EXPORTED to SAFE_TO_EXIT. Espressif esp_tinyusb 2.x handles host SCSI START STOP UNIT eject by transferring storage ownership from USB to APP. Subscribe to `tinyusb_msc_set_storage_callback`: only `TINYUSB_MSC_EVENT_MOUNT_COMPLETE` with `TINYUSB_MSC_STORAGE_MOUNT_APP` marks SAFE_TO_EXIT. On mount failure keep USB page locked. GPIO0 Back can now clean up after that event; navigate only on ESP_OK. Check with an expendable TF card and monitor re-enumeration on macOS. If the SD FAT cannot be APP-mounted after eject, the UI is intentionally blocked until a proper recovery path is added.

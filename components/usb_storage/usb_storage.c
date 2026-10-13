@@ -17,6 +17,18 @@ static tinyusb_msc_storage_handle_t storage;
 static bool sd_host_initialized;
 static bool usb_driver_installed;
 static bool msc_driver_installed;
+static void on_msc_event(tinyusb_msc_storage_handle_t handle, tinyusb_msc_event_t *event, void *arg) {
+    (void)arg;
+    if (handle != storage || state != USB_STORAGE_EXPORTED) return;
+    if (event->id == TINYUSB_MSC_EVENT_MOUNT_COMPLETE &&
+        event->mount_point == TINYUSB_MSC_STORAGE_MOUNT_APP) {
+        state = USB_STORAGE_SAFE_TO_EXIT;
+        ESP_LOGI(TAG, "Mac eject confirmed: storage transferred to APP");
+    } else if (event->id == TINYUSB_MSC_EVENT_MOUNT_FAILED &&
+               event->mount_point == TINYUSB_MSC_STORAGE_MOUNT_APP) {
+        ESP_LOGE(TAG, "Host eject received but APP mount failed, stay on USB page");
+    }
+}
 
 usb_storage_state_t usb_storage_get_state(void) { return state; }
 bool usb_storage_can_exit(void) {
@@ -66,6 +78,8 @@ esp_err_t usb_storage_enter(void) {
     err = tinyusb_msc_install_driver(&driver_config);
     if (err != ESP_OK) goto failed;
     msc_driver_installed = true;
+    err = tinyusb_msc_set_storage_callback(on_msc_event, NULL);
+    if (err != ESP_OK) goto failed;
     tinyusb_msc_storage_config_t config = {
         .medium.card = card,
         .fat_fs = { .do_not_format = true },

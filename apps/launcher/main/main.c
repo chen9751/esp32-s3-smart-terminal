@@ -37,7 +37,10 @@ void app_main(void) {
                                              heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
     // First-flash test: NO 10s auto HA and NO firmware switching.
     while(1) {
-        if(custom_key_poll_click()) launcher_ui_back();
+        if(custom_key_poll_click()) {
+            ESP_LOGI(TAG, "GPIO0 Back: USB state=%d", usb_storage_get_state());
+            launcher_ui_back();
+        }
         board_support_loop();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
