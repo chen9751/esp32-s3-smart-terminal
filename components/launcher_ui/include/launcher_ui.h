@@ -12,3 +12,6 @@ typedef void (*launcher_action_cb_t)(launcher_action_t action, void *ctx);
 void launcher_ui_create(launcher_action_cb_t cb, void *ctx);
 void launcher_ui_back(void); // bind custom physical key single-click globally
 bool launcher_ui_usb_visible(void);
+
+// Call only after USB shutdown and storage checks return ESP_OK.
+void launcher_ui_confirm_usb_exit(void);

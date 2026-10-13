@@ -18,3 +18,11 @@
 - https://github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2/tree/main/Arduino/examples/04_SD_Card
 - https://docs.espressif.com/projects/esp-usb/en/latest/esp32s3/usb_device.html
 - https://components.espressif.com/components/espressif/esp_tinyusb/versions/2.0.1
+
+## Physical Back button and safe eject design (2026-10-13)
+
+The GPIO0 custom/BOOT key single-click is the requested Back key. On the USB page it sends a **request**, not an unconditional `lv_screen_load(home)`. The controller shall invoke `usb_storage_exit()`, then `launcher_ui_confirm_usb_exit()` **only after an ESP_OK result**. When storage is still exported or the host cannot be confirmed safely ejected, keep the USB page visible and show a human-readable warning. The button cannot itself instruct macOS to flush Finder's buffered writes; the user must first eject the disk in Finder, or a properly verified SCSI eject handshake must be implemented.
+
+The ESP-IDF USB implementation was also aligned to the official esp_tinyusb MSC 2.x API: `tinyusb_msc_install_driver()` / `tinyusb_msc_uninstall_driver()` and `tinyusb_msc_storage_config_t.fat_fs.do_not_format`, using `TINYUSB_DEFAULT_CONFIG(NULL)`. This is still untested on a physical board.
+
+Important: do not claim USB is fully complete yet: the host-eject acknowledgement, actual touchscreen callback, custom-key to LVGL controller binding and board display/touch bringup are pending. Do not use the currently generated Launcher bin on a device before those are implemented and tested.

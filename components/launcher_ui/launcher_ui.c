@@ -49,11 +49,14 @@ static void tile(lv_obj_t *parent,int x,const lv_image_dsc_t *src, launcher_acti
     icon(b,src);
 }
 void launcher_ui_back(void) {
+    // Controller decides if leaving USB is safe. Do not navigate before ack.
+    emit(LAUNCHER_ACTION_BACK);
+}
+void launcher_ui_confirm_usb_exit(void) {
     if (usb_visible) {
-        usb_visible=false;
+        usb_visible = false;
         lv_screen_load(home_page);
     }
-    emit(LAUNCHER_ACTION_BACK);
 }
 bool launcher_ui_usb_visible(void) { return usb_visible; }
 void launcher_ui_create(launcher_action_cb_t cb,void *ctx) {

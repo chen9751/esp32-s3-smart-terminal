@@ -16,6 +16,7 @@ static sdmmc_card_t *card;
 static tinyusb_msc_storage_handle_t storage;
 static bool sd_host_initialized;
 static bool usb_driver_installed;
+static bool msc_driver_installed;
 
 usb_storage_state_t usb_storage_get_state(void) { return state; }
 bool usb_storage_can_exit(void) {
@@ -33,7 +34,10 @@ static void cleanup(void) {
         esp_err_t err=tinyusb_driver_uninstall();
         if (err == ESP_OK) usb_driver_installed=false;
     }
-    if (!storage && !usb_driver_installed && sd_host_initialized) {
+    if (msc_driver_installed && !storage && !usb_driver_installed) {
+        if (tinyusb_msc_uninstall_driver() == ESP_OK) msc_driver_installed=false;
+    }
+    if (!storage && !usb_driver_installed && !msc_driver_installed && sd_host_initialized) {
         sdmmc_host_deinit();
         sd_host_initialized=false;
         free(card);card=NULL;
@@ -58,14 +62,18 @@ esp_err_t usb_storage_enter(void) {
     if (err != ESP_OK) goto failed;
     err=sdmmc_card_init(&host,card);
     if (err != ESP_OK) goto failed;
-    tinyusb_msc_storage_config_t config={
-        .medium.card=card,
-        .fat_fs.do_not_format=true,
-        .mount_point=TINYUSB_MSC_STORAGE_MOUNT_USB
+    tinyusb_msc_driver_config_t driver_config = { 0 };
+    err = tinyusb_msc_install_driver(&driver_config);
+    if (err != ESP_OK) goto failed;
+    msc_driver_installed = true;
+    tinyusb_msc_storage_config_t config = {
+        .medium.card = card,
+        .fat_fs = { .do_not_format = true },
+        .mount_point = TINYUSB_MSC_STORAGE_MOUNT_USB,
     };
     err=tinyusb_msc_new_storage_sdmmc(&config,&storage);
     if (err != ESP_OK) goto failed;
-    tinyusb_config_t tusb=TINYUSB_DEFAULT_CONFIG();
+    tinyusb_config_t tusb=TINYUSB_DEFAULT_CONFIG(NULL);
     err=tinyusb_driver_install(&tusb);
     if (err != ESP_OK) goto failed;
     usb_driver_installed=true;
@@ -81,7 +89,7 @@ failed:
 esp_err_t usb_storage_exit(void) {
     if (!usb_storage_can_exit()) return ESP_ERR_INVALID_STATE;
     cleanup();
-    if (storage || usb_driver_installed) return ESP_ERR_INVALID_STATE;
+    if (storage || usb_driver_installed || msc_driver_installed) return ESP_ERR_INVALID_STATE;
     state=USB_STORAGE_IDLE;
     return ESP_OK;
 }
