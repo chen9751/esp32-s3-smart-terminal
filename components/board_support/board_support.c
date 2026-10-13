@@ -8,6 +8,7 @@
 #include "esp_heap_caps.h"
 #include "freertos/task.h"
 #include "driver/spi_master.h"
+#include "driver/ledc.h"
 #include "driver/i2c_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -15,6 +16,8 @@
 #include "esp_lcd_axs15231b.h"
 #include "esp_io_expander_tca9554.h"
 
+#define DEFAULT_BRIGHTNESS_PERCENT 20
+#define BACKLIGHT_GPIO 42
 #define PHYS_W 172
 #define PHYS_H 640
 #define LOG_W 640
@@ -86,7 +89,32 @@ static void touch_read(lv_indev_t *indev,lv_indev_data_t *data) {
 static void tick(void *arg){(void)arg;lv_tick_inc(5);}
 bool board_support_ready(void){return ready;}
 void board_support_loop(void){if(ready) lv_timer_handler();}
+static esp_err_t backlight_pwm_init(void) {
+    // Waveshare V2 PWM backlight polarity is inverted: 255=off, 0=max.
+    ledc_timer_config_t timer = {
+        .speed_mode=LEDC_LOW_SPEED_MODE,
+        .duty_resolution=LEDC_TIMER_8_BIT,
+        .timer_num=LEDC_TIMER_3,
+        .freq_hz=50000,
+        .clk_cfg=LEDC_AUTO_CLK,
+    };
+    ESP_RETURN_ON_ERROR(ledc_timer_config(&timer), TAG, "backlight PWM timer");
+    ledc_channel_config_t channel = {
+        .gpio_num=BACKLIGHT_GPIO,
+        .speed_mode=LEDC_LOW_SPEED_MODE,
+        .channel=LEDC_CHANNEL_1,
+        .intr_type=LEDC_INTR_DISABLE,
+        .timer_sel=LEDC_TIMER_3,
+        .duty=255 - (255 * DEFAULT_BRIGHTNESS_PERCENT / 100),
+        .hpoint=0,
+    };
+    ESP_RETURN_ON_ERROR(ledc_channel_config(&channel), TAG, "backlight PWM channel");
+    ESP_LOGI(TAG,"Boot backlight target=%d%% (PWM duty=%lu)",
+             DEFAULT_BRIGHTNESS_PERCENT,(unsigned long)channel.duty);
+    return ESP_OK;
+}
 esp_err_t board_support_init(void) {
+    ESP_RETURN_ON_ERROR(backlight_pwm_init(),TAG,"backlight startup");
     lv_init();
     flush_done=xSemaphoreCreateBinary();
     if(!flush_done) return ESP_ERR_NO_MEM;
