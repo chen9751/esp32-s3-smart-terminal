@@ -230,9 +230,6 @@ esp_err_t network_service_init(void)
 
     /* TF card is the ONLY source for user Wi-Fi and AI configuration.
      * Missing/broken media is a nonfatal state; never start a setup AP. */
-    esp_err_t config_err = load_tf_config();
-    if (config_err != ESP_OK) return ESP_OK;
-
     esp_err_t err = nvs_flash_init(); /* ESP-IDF Wi-Fi driver internal NVS only. */
     if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
         err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -240,6 +237,8 @@ esp_err_t network_service_init(void)
         if (err == ESP_OK) err = nvs_flash_init();
     }
     if (err != ESP_OK) return err;
+    esp_err_t config_err = load_tf_config();
+    if (config_err != ESP_OK) return ESP_OK;
 
     err = esp_netif_init();
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) return err;
