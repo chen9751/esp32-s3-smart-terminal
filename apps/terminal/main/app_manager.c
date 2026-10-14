@@ -4,6 +4,8 @@
 #include "ui/mode_placeholder.h"
 #include "esp_log.h"
 #include "usb_storage.h"
+#include "network_service.h"
+#include "ai_audio.h"
 static terminal_mode_t current=TERMINAL_LAUNCHER;
 static const char *TAG="app_manager";
 static void selection(launcher_action_t action,void *unused){(void)unused;app_manager_select(action);}
@@ -26,7 +28,14 @@ void app_manager_select(launcher_action_t action){
  lv_obj_t *s=lv_obj_create(NULL);
  lv_screen_load(s);
  launcher_ui_destroy();
- if(current==TERMINAL_AI)terminal_ai_face_show();
+ if(current==TERMINAL_AI){
+   terminal_ai_face_show();
+   /* Do not activate these services in Launcher/HA/Sony. */
+   esp_err_t n=network_service_init();
+   if(n!=ESP_OK)ESP_LOGW(TAG,"AI WiFi: %s",esp_err_to_name(n));
+   esp_err_t a=ai_audio_init();
+   if(a!=ESP_OK)ESP_LOGW(TAG,"AI audio: %s",esp_err_to_name(a));
+ }
  else placeholder_show(current==TERMINAL_HA?PLACEHOLDER_HA:PLACEHOLDER_SONY);
 }
 void app_manager_back(void){
