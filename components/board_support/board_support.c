@@ -9,6 +9,9 @@
 #include "freertos/task.h"
 #include "driver/spi_master.h"
 #include "driver/ledc.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
 #include "driver/i2c_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -35,6 +38,8 @@ static uint8_t *dma_buf;
 static bool ready;
 static uint32_t flush_errors;
 static SemaphoreHandle_t flush_done;
+static adc_oneshot_unit_handle_t battery_adc;
+static adc_cali_handle_t battery_cali;
 static bool s_backlight_ready;
 static uint8_t s_backlight_percent;
 
@@ -137,6 +142,35 @@ esp_err_t board_backlight_set_percent(uint8_t percent)
 
 uint8_t board_backlight_get_percent(void) { return s_backlight_percent; }
 
+esp_err_t board_battery_read_mv(uint16_t *millivolts) {
+    if (!millivolts) return ESP_ERR_INVALID_ARG;
+    if (!battery_adc) return ESP_ERR_INVALID_STATE;
+    int sum=0, raw=0;
+    for (int i=0; i<8; ++i) {
+        esp_err_t e=adc_oneshot_read(battery_adc,ADC_CHANNEL_3,&raw);
+        if (e!=ESP_OK) return e;
+        sum+=raw;
+    }
+    int adc_mv=0;
+    if (battery_cali) {
+        esp_err_t e=adc_cali_raw_to_voltage(battery_cali,sum/8,&adc_mv);
+        if(e!=ESP_OK) return e;
+    } else {
+        return ESP_ERR_NOT_SUPPORTED; // Never show an uncalibrated value as exact VBAT.
+    }
+    *millivolts=(uint16_t)(adc_mv*3);
+    return ESP_OK;
+}
+static esp_err_t battery_adc_init(void) {
+    const adc_oneshot_unit_init_cfg_t u={.unit_id=ADC_UNIT_1};
+    ESP_RETURN_ON_ERROR(adc_oneshot_new_unit(&u,&battery_adc),TAG,"battery ADC");
+    const adc_oneshot_chan_cfg_t c={.atten=ADC_ATTEN_DB_12,.bitwidth=ADC_BITWIDTH_12};
+    ESP_RETURN_ON_ERROR(adc_oneshot_config_channel(battery_adc,ADC_CHANNEL_3,&c),TAG,"battery ADC channel");
+    const adc_cali_curve_fitting_config_t cc={.unit_id=ADC_UNIT_1,.atten=ADC_ATTEN_DB_12,.bitwidth=ADC_BITWIDTH_12};
+    esp_err_t err=adc_cali_create_scheme_curve_fitting(&cc,&battery_cali);
+    if(err!=ESP_OK) ESP_LOGW(TAG,"Battery calibration unavailable: %s",esp_err_to_name(err));
+    return ESP_OK;
+}
 esp_err_t board_support_init(void) {
     lv_init();
     flush_done=xSemaphoreCreateBinary();
@@ -216,6 +250,8 @@ esp_err_t board_support_init(void) {
     ESP_RETURN_ON_ERROR(esp_timer_create(&args,&timer),TAG,"tick timer");
     ESP_RETURN_ON_ERROR(esp_timer_start_periodic(timer,5000),TAG,"start tick");
     ESP_RETURN_ON_ERROR(board_backlight_set_percent(BOARD_BOOT_BRIGHTNESS_PERCENT),TAG,"default brightness");
+    esp_err_t battery_err=battery_adc_init();
+    if(battery_err!=ESP_OK) ESP_LOGW(TAG,"Battery ADC unavailable: %s",esp_err_to_name(battery_err));
     ready=true;
     ESP_LOGI(TAG,"V2 display/touch started, 640x172, PSRAM framebuffer");
     return ESP_OK;
