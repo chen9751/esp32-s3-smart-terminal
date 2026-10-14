@@ -34,7 +34,7 @@ static void voice_click(lv_event_t *e){
  voice=(int)(intptr_t)lv_event_get_user_data(e);activity(e);store_voice();
  /* The voice selection applies to the NEXT Omni realtime session. */
  for(int i=0;i<3;i++){
-  lv_obj_t *b=lv_obj_get_child(content,i+1);
+  lv_obj_t *b=lv_obj_get_child(content,i+2);
   if(b)lv_obj_set_style_bg_color(b,lv_color_hex(i==voice?0x14576A:0x26343A),0);
  }
 }
