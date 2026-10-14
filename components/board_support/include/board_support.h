@@ -12,3 +12,6 @@ bool board_support_ready(void);
 // Gamma-independent visible brightness range calibrated in the previous V2 project.
 esp_err_t board_backlight_set_percent(uint8_t percent);
 uint8_t board_backlight_get_percent(void);
+
+// V2 VBAT: GPIO4 ADC1_CH3, 3:1 resistive divider. Returns ESP_OK on a valid measurement.
+esp_err_t board_battery_read_mv(uint16_t *millivolts);

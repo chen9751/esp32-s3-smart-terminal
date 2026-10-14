@@ -4,5 +4,5 @@ idf_component_register(
       "ui/terminal_key.c"
  INCLUDE_DIRS "." "ui"
  REQUIRES board_support launcher_ui lvgl_kawaii_face usb_storage
-          esp_timer esp_driver_gpio
+          esp_timer esp_driver_gpio network ai_audio nvs_flash
 )
